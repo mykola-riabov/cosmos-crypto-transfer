@@ -1,0 +1,848 @@
+[
+    {
+        "symbol": "osmo",
+        "denom_contract": "uosmo",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "iris",
+        "denom_contract": "ibc/7C4D60AA95E5A7558B0A364860979CA34B7FF8AAF255B87AF9E879374470CEC0",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "graviton",
+        "denom_contract": "ibc/E97634A40119F1898989C2A23224ED83FDD0A57EA46B3A094E287288D1672B44",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "gusdc",
+        "denom_contract": "ibc/9F9B07EF9AD291167CF5700628145DE1DEB777C2CFC7907553B24446515F6D0E",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axlusdc",
+        "denom_contract": "ibc/D189335C6E4A68B513C10AB227BF1C1D38C746766278BA3EEB4FB14124F1D858",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "fet",
+        "denom_contract": "ibc/5D1F516200EE8C6B2354102143B78A2DEDA25EDE771AC0F8DC3C1837C8FD4447",
+        "network": "osmosis",
+        "decimal": "18"
+    },
+    {
+        "symbol": "gweth",
+        "denom_contract": "ibc/65381C5F3FD21442283D56925E62EA524DED8B6927F0FF94E21E0020954C40B5",
+        "network": "osmosis",
+        "decimal": "18"
+    },
+    {
+        "symbol": "axlweth",
+        "denom_contract": "ibc/EA1D43981D5C9A1C4AAEA9C23BB1D4FA126BA9BC7020A25E0AE4AA841EA25DC5",
+        "network": "osmosis",
+        "decimal": "18"
+    },
+    {
+        "symbol": "axlwbtc",
+        "denom_contract": "ibc/D1542AA8762DB13087D8364F3EA6509FD6F009A34F00426AF9E4F9FA85CBBF1F",
+        "network": "osmosis",
+        "decimal": "8"
+    },
+    {
+        "symbol": "dsm",
+        "denom_contract": "ibc/EA4C0A9F72E2CEDF10D0E7A9A6A22954DB3444910DB5BE980DF59B05A46DAD1C",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "juno",
+        "denom_contract": "ibc/46B44899322F3CD854D2D46DEEF881958467CDD4B3B10086DA49296BBED94BED",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "evmos",
+        "denom_contract": "ibc/6AE98883D4D5D5FF9E50D7130F1305DA2FFA0C652D1DD9C123657C6B4EB2DF8A",
+        "network": "osmosis",
+        "decimal": "18"
+    },
+    {
+        "symbol": "kava",
+        "denom_contract": "ibc/57AA1A70A4BC9769C525EBF6386F7A21536E04A79D62E1981EFCEF9428EBB205",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "iov",
+        "denom_contract": "ibc/52B1AA623B34EB78FD767CEA69E8D7FA6C9CFE1FBF49C5406268FD325E2CC2AC",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cre",
+        "denom_contract": "ibc/5A7C219BA5F7582B99629BA3B2A01A61BFDA0F6FD1FE95B5366F7334C4BC0580",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "flix",
+        "denom_contract": "ibc/CEE970BB3D26F4B907097B6B660489F13F3B0DA765B83CC7D9A0BC0CE220FA6F",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "ist",
+        "denom_contract": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axl",
+        "denom_contract": "ibc/903A61A498756EA560B85A85132D3AEE21B5DEDD41213725D22ABF276EA6945E",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "bld",
+        "denom_contract": "ibc/2DA9C149E9AD2BD27FEFA635458FB37093C256C1A940392634A16BEA45262604",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmdx",
+        "denom_contract": "ibc/EA3E1640F9B1532AB129A571203A0B9F789A7F14BB66E350DCBFA18E1A1931F0",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmst",
+        "denom_contract": "ibc/23CA6C8D1AB2145DD13EB1E089A2E3F960DC298B468CCE034E19E5A78B61136E",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "inj",
+        "denom_contract": "ibc/64BA6E31FE887D66C6F8F31C7B1A80C7CA179239677B4088BB55F5EA07DBE273",
+        "network": "osmosis",
+        "decimal": "18"
+    },
+    {
+        "symbol": "juno",
+        "denom_contract": "ibc/46B44899322F3CD854D2D46DEEF881958467CDD4B3B10086DA49296BBED94BED",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "lunc",
+        "denom_contract": "ibc/0EF15DF2F02480ADE0BB6E85D9EBB5DAEA2836D3860E9F97F9AADE4F57A31AA0",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "luna",
+        "denom_contract": "ibc/785AFEC6B3741100D15E7AF01374E3C4C36F24888E96479B1C33F5C71F364EF9",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "ustc",
+        "denom_contract": "ibc/BE1BB42D4BE3C30D50B68D7C41DB4DFCE9678E8EF8C539F6E6A9345048894FCC",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "mars",
+        "denom_contract": "ibc/573FCD90FACEE750F55A8864EF7D38265F07E5A9273FA0E8DAFD39951332B580",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "stevmos",
+        "denom_contract": "ibc/C5579A9595790017C600DD726276D978B9BF314CF82406CE342720A9C7911A01",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "like",
+        "denom_contract": "ibc/9989AD6CCA39D1131523DB0617B50F6442081162294B4795E26746292467B525",
+        "network": "osmosis",
+        "decimal": "9"
+    },
+    {
+        "symbol": "huahua",
+        "denom_contract": "ibc/B9E0A1A524E98BB407D3CED8720EFEFD186002F90C1B1B7964811DD0CCC12228",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "eeur",
+        "denom_contract": "ibc/5973C068568365FFF40DEDCF1A1CB7582B6116B731CD31A12231AE25E20B871F",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "btsg",
+        "denom_contract": "ibc/4E5444C35610CC76FC94E7F7886B93121175C28262DDFDDE6F84E82BF2425452",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "whale",
+        "denom_contract": "ibc/EDD6F0D66BCD49C1084FB2C35353B4ACD7B9191117CE63671B61320548F7C89D",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "kuji",
+        "denom_contract": "ibc/BB6BCDB515050BAE97516111873CCD7BCF1FD0CCB723CC12F3C4F704D6C646CE",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "scrt",
+        "denom_contract": "ibc/0954E1C28EB7AF5B72D24F3BC2B47BBB2FDF91BDDFD57B74B99E133AED40972A",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cnto",
+        "denom_contract": "ibc/D38BB3DD46864694F009AF01DA5A815B3A875F8CC52FF5679BFFCC35DC7451D5",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "acre",
+        "denom_contract": "ibc/BB936517F7E5D77A63E0ADB05217A6608B0C4CF8FBA7EA2F4BAE4107A7238F06",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cro",
+        "denom_contract": "ibc/E6931F78057F7CC5DA0FD6CEF82FF39373A6E0452BF1FD76910B93292CF356C1",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "dvpn",
+        "denom_contract": "ibc/9712DBB13B9631EDFA9BF61B55F1B2D290B2ADB67E3A4EB3A875F3B6081B3B84",
+        "network": "osmosis",
+        "decimal": "6"
+    },
+    {
+        "symbol": "iris",
+        "denom_contract": "uiris",
+        "network": "irisnet",
+        "decimal": "6"
+    },
+    {
+        "symbol": "gusdc",
+        "denom_contract": "ibc/A5A5EBF3B7A180FBA2A3CE133153F5B904AA8B085691F66A15BE8156B6722652",
+        "network": "irisnet",
+        "decimal": "6"
+    },
+    {
+        "symbol": "graviton",
+        "denom_contract": "ibc/DDC0CE4852A53B1D3A6BF056CBB59701AC8E91798028CD7C2A7F490A753F8A88",
+        "network": "irisnet",
+        "decimal": "6"
+    },
+    {
+        "symbol": "busd",
+        "denom_contract": "htltbcbusd",
+        "network": "irisnet",
+        "decimal": "8"
+    },
+    {
+        "symbol": "bnb",
+        "denom_contract": "htltbcbnb",
+        "network": "irisnet",
+        "decimal": "8"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+        "network": "irisnet",
+        "decimal": "6"
+    },
+    {
+        "symbol": "iov",
+        "denom_contract": "ibc/6DF82C1C886C15A5D1F514D30318C7C1431B08EABE7658E6A582CCFC52D8E0AB",
+        "network": "irisnet",
+        "decimal": "6"
+    },
+    {
+        "symbol": "gweth",
+        "denom_contract": "ibc/E244B968EE0D1EC047E7516F6ABECE7B68E9FD93B4BD8D08D13642247416BB17",
+        "network": "irisnet",
+        "decimal": "18"
+    },
+    {
+        "symbol": "graviton",
+        "denom_contract": "ugraviton",
+        "network": "gravitybridge",
+        "decimal": "6"
+    },
+    {
+        "symbol": "gusdc",
+        "denom_contract": "gravity0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "network": "gravitybridge",
+        "decimal": "6"
+    },
+    {
+        "symbol": "kuji",
+        "denom_contract": "ibc/6BEE6DBC35E5CCB3C8ADA943CF446735E6A3D48B174FEE027FAB3410EDE6319C",
+        "network": "gravitybridge",
+        "decimal": "6"
+    },
+    {
+        "symbol": "gweth",
+        "denom_contract": "gravity0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "network": "gravitybridge",
+        "decimal": "18"
+    },
+    {
+        "symbol": "fet",
+        "denom_contract": "afet",
+        "network": "fetchhub",
+        "decimal": "18"
+    },
+    {
+        "symbol": "axlusdc",
+        "denom_contract": "ibc/8AF69BC1E1D72B447738B50C28B382F62F2AF65DE303021E45C0B7C851B4B2E1",
+        "network": "fetchhub",
+        "decimal": "6"
+    },
+    {
+        "symbol": "juno",
+        "denom_contract": "ujuno",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "stars",
+        "denom_contract": "ibc/F6B367385300865F654E110976B838502504231705BAC0849B0651C226385885",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axl",
+        "denom_contract": "uaxl",
+        "network": "axelar",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axlusdc",
+        "denom_contract": "uusdc",
+        "network": "axelar",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cre",
+        "denom_contract": "ucre",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "bcre",
+        "denom_contract": "ubcre",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "iris",
+        "denom_contract": "ibc/65CE3A1EC2EE4CAAC202494AE4E857D60704C46CE4770AD8BD80E41429618D58",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "graviton",
+        "denom_contract": "ibc/C950356239AD2A205DE09FDF066B1F9FF19A7CA7145EA48A5B19B76EE47E52F7",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "ustc",
+        "denom_contract": "ibc/6F4968A73F90CF7DE6394BF937D6DF7C7D162D74D839C13F53B41157D315E05F",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "lunc",
+        "denom_contract": "ibc/4627AD2524E3E0523047E35BB76CC90E37D9D57ACF14F0FCBCEB2480705F3CB8",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axlusdc",
+        "denom_contract": "ibc/BFF0D3805B50D93E2FA5C0B2DDF7E0B30A631076CD80BC12A48C0E95404B4A41",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "gusdc",
+        "denom_contract": "ibc/CD01034D6749F20AAC5330EF4FD8B8CA7C40F7527AB8C4A302FBD2A070852EE1",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "harbor",
+        "denom_contract": "ibc/BAEA8E5E532DD3442D8938DA6E3C456EEE52CFD2CCC1B3512B0A77E7BEDB2F45",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "juno",
+        "denom_contract": "ibc/C814F0B662234E24248AE3B2FE2C1B54BBAF12934B757F6E7BC5AEC119963895",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmdx",
+        "denom_contract": "ibc/61DF64ADF65230540C14C63D64897BE08A3DC9A516A91425913F01240E2F432F",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "luna",
+        "denom_contract": "ibc/8F865D9760B482FF6254EDFEC1FF2F1273B9AB6873A7DE484F89639795D73D75",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "evmos",
+        "denom_contract": "ibc/73E97EB411B29C6F989C35D277D1A7FC65083572F102AC6BD101884EE9FB2C9F",
+        "network": "crescent",
+        "decimal": "18"
+    },
+    {
+        "symbol": "inj",
+        "denom_contract": "ibc/5A76568E079A31FA12165E4559BA9F1E9D4C97F9C2060B538C84DCD503815E30",
+        "network": "crescent",
+        "decimal": "18"
+    },
+    {
+        "symbol": "lunc",
+        "denom_contract": "ibc/4627AD2524E3E0523047E35BB76CC90E37D9D57ACF14F0FCBCEB2480705F3CB8",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "ist",
+        "denom_contract": "ibc/CA1261224952DF089EFD363D8DBB30A8AB6D8CD181E60EE9E68E432F8DE14FE3",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "mars",
+        "denom_contract": "ibc/10A0DD366A472B098DFD93FBAE62E65DA387F314872C4AD3AE43185154738D8D",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axl",
+        "denom_contract": "ibc/0634D0993744740D675AD01E81156EAC945AEAAE17C074918DC7FF52F41B263E",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "bld",
+        "denom_contract": "ibc/11F940BCDFD7CFBFD7EDA13F25DA95D308286D441209D780C9863FD4271514EB",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmst",
+        "denom_contract": "ibc/9EC8A1701813BB7B73BFED2496009ABB2C8BF187E6CDFA788D77F68E08BC05CD",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cro",
+        "denom_contract": "ibc/5EDC10227E40B52D893F5A26C107E2A338C4A643615C10B356DC62B5F4FE1DB1",
+        "network": "crescent",
+        "decimal": "8"
+    },
+    {
+        "symbol": "gweth",
+        "denom_contract": "ibc/DBF5FA602C46392DE9F4796A0FC7D02F3A8A3D32CA3FAA50B761D4AA6F619E95",
+        "network": "crescent",
+        "decimal": "18"
+    },
+    {
+        "symbol": "axlweth",
+        "denom_contract": "ibc/F1806958CA98757B91C3FA1573ECECD24F6FA3804F074A6977658914A49E65A3",
+        "network": "crescent",
+        "decimal": "18"
+    },
+    {
+        "symbol": "statom",
+        "denom_contract": "ibc/D64F87FAE0B35C1954DD7921BA7A2939705DE77CBF72B8002F2E3552EDE4DE52",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "stkatom",
+        "denom_contract": "ibc/E32F6485CDAE995FC492010770936119D0BF90F5226C9AED727988DF03B5F569",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "stevmos",
+        "denom_contract": "ibc/4171A6F59F8A708D807E03B43FA0E16EC7041C189557B7A8E519757424367D41",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "canto",
+        "denom_contract": "ibc/4DF678EF85F1FD3CEFF41429E14B22E5D7730B00230688E6783AF06112415620",
+        "network": "crescent",
+        "decimal": "6"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/C4CFF46FD6DE35CA4CF4CE031E643C8FDC9BA4B99AE598E9B0ED98FE3A2319F9",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "juno",
+        "denom_contract": "ujuno",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "osmo",
+        "denom_contract": "ibc/ED07A3391A112B175915CD8FAF43A2DA8E4790EDE12566649D0C2F97716B8518",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "scrt",
+        "denom_contract": "ibc/B55B08EF3667B0C6F029C2CC9CAA6B00788CF639EBB84B34818C85CBABA33ABD",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "luna",
+        "denom_contract": "ibc/107D152BB3176FAEBF4C2A84C5FFDEEA7C7CB4FE1BBDAB710F1FD25BCD055CBF",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "akt",
+        "denom_contract": "ibc/DFC6F33796D5D0075C5FB54A4D7B8E76915ACF434CB1EE2A1BA0BB8334E17C3A",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "aqua",
+        "denom_contract": "juno1hnftys64ectjfynm6qjk9my8jd3f6l9dq9utcd3dy8ehwrsx9q4q7n9uxt",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "btsg",
+        "denom_contract": "ibc/008BFD000A10BCE5F0D4DD819AE1C1EC2942396062DABDD6AE64A655ABC7085B",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmdx",
+        "denom_contract": "ibc/946AD96F278770521526D7283F58268DA2F6ACDDE40324A9D1C86811D78C86A0",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "glto",
+        "denom_contract": "juno1j0a9ymgngasfn3l5me8qpd53l5zlm9wurfdk7r65s5mg6tkxal3qpgf5se",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "hope",
+        "denom_contract": "juno1re3x67ppxap48ygndmrc7har2cnc7tcxtm9nplcas4v0gc3wnmvs3s807z",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "neta",
+        "denom_contract": "juno168ctmpyppk90d34p3jjy658zf5a5l3w8wk35wht6ccqj4mr0yv8s4j5awr",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "xprt",
+        "denom_contract": "ibc/7455B3F2F2737906BACF4AE980069A4CAB7C7F9FDAABAEFBA439DF037AEC5898",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "raw",
+        "denom_contract": "juno15u3dt79t6sxxa3x3kpkhzsy56edaa5a66wvt3kxmukqjz2sx0hes5sn38g",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "stars",
+        "denom_contract": "ibc/F6B367385300865F654E110976B838502504231705BAC0849B0651C226385885",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "lunc",
+        "denom_contract": "ibc/8F865D9760B482FF6254EDFEC1FF2F1273B9AB6873A7DE484F89639795D73D75",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "ustc",
+        "denom_contract": "ibc/2DA4136457810BCB9DAAB620CA67BC342B17C3C70151CA70490A170DF7C9CB27",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axlusdc",
+        "denom_contract": "ibc/EAC38D55372F38F1AFD68DF7FE9EF762DCF69F26520643CF3F9D292A738D8034",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "whale",
+        "denom_contract": "ibc/3A6ADE78FB8169C034C29C4F2E1A61CE596EC8235366F22381D981A98F1F5A5C",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "wynd",
+        "denom_contract": "juno1mkw83sv6c7sjdvsaplrzc8yaes9l42p4mhy0ssuxjnyzl87c9eps7ce3m9",
+        "network": "juno",
+        "decimal": "6"
+    },
+    {
+        "symbol": "astro",
+        "denom_contract": "ibc/640E1C3E28FD45F611971DF891AE3DC90C825DF759DF8FAA8F33F7F72B35AD56",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "graviton",
+        "denom_contract": "ibc/2F1447818CF99498AE62D9FB4D5E0C9FD48C68FC118C34D2ECFFFED0AD082196",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "juno",
+        "denom_contract": "ibc/EFF323CC632EC4F747C61BCE238A758EFDB7699C3226565F7C20DA06509D59A5",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "kujira",
+        "denom_contract": "ukuji",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "osmo",
+        "denom_contract": "ibc/47BD209179859CDE4A2806763D7189B6E6FE13A17880FE2B42DE1E6C1E329E23",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "scrt",
+        "denom_contract": "ibc/A358D7F19237777AF6D8AD0E0F53268F8B18AE8A53ED318095C14D6D7F3B2DB5",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "luna",
+        "denom_contract": "ibc/DA59C009A0B3B95E0549E6BF7B075C8239285989FF457A8EDDBB56F10B2A6986",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "acre",
+        "denom_contract": "ibc/FD021051CD0A21590CAC7907B22749B19CC8CCB6A22DE48C21FE7D9EF1EE80B7",
+        "network": "kujira",
+        "decimal": "18"
+    },
+    {
+        "symbol": "aqua",
+        "denom_contract": "ibc/D36D2BBE441D3605EEF340EAFAC57D669880597073050A2650B1468F1634A5F5",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "axl",
+        "denom_contract": "ibc/C01154C2547F4CB10A985EA78E7CD4BA891C1504360703A37E1D7043F06B5E1F",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cnto",
+        "denom_contract": "ibc/BF603AD88AA4C36FC8CA99F6D703CA1D7D437A1EA97023A73A8BA4437A05ABDF",
+        "network": "kujira",
+        "decimal": "18"
+    },
+    {
+        "symbol": "cmst",
+        "denom_contract": "ibc/1603E8643A49AD47F536F645A4BF0E4C1E06C76F0A98CBE8054B177F1EE7C39A",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmdx",
+        "denom_contract": "ibc/3607EB5B5E64DD1C0E12E07F077FF470D5BC4706AFCBC98FE1BA960E5AE4CE07",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cro",
+        "denom_contract": "ibc/BBC45F1B65B6D3C11C3C56A9428D38C3A8D03944473791C52DFB7CD3F8342CBC",
+        "network": "kujira",
+        "decimal": "8"
+    },
+    {
+        "symbol": "evmos",
+        "denom_contract": "ibc/F3AA7EF362EC5E791FE78A0F4CCC69FEE1F9A7485EB1A8CAB3F6601C00522F10",
+        "network": "kujira",
+        "decimal": "18"
+    },
+    {
+        "symbol": "inj",
+        "denom_contract": "ibc/5A3DCF59BC9EC5C0BB7AA0CA0279FC2BB126640CB8B8F704F7BC2DC42495041B",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "dvpn",
+        "denom_contract": "ibc/CF90BCBEDFF409F9187A0C3A69C1082D56908DC3F7FC342ED82455A504AD8AA9",
+        "network": "kujira",
+        "decimal": "18"
+    },
+    {
+        "symbol": "mars",
+        "denom_contract": "ibc/DBF6ABDB5F3D4267C039967515594453F4A31007FD838A566F563A01D2C2FB80",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "stars",
+        "denom_contract": "ibc/4F393C3FCA4190C0A6756CE7F6D897D5D1BE57D6CCB80D0BC87393566A7B6602",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "whale",
+        "denom_contract": "ibc/21F041CFE99994E0D027D0C5F72A9EB6224CBCAF5A6AD5DDB75F67A781D46C68",
+        "network": "kujira",
+        "decimal": "6"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "uatom",
+        "network": "cosmoshub",
+        "decimal": "6"
+    },
+    {
+        "symbol": "fet",
+        "denom_contract": "ibc/05A95379CE9BBE1A208E492095569205474C2332F4777F224F73EC0FC13796CC",
+        "network": "cosmoshub",
+        "decimal": "18"
+    },
+    {
+        "symbol": "boot",
+        "denom_contract": "boot",
+        "network": "bostrom",
+        "decimal": "0"
+    },
+    {
+        "symbol": "hydrogen",
+        "denom_contract": "hydrogen",
+        "network": "bostrom",
+        "decimal": "0"
+    },
+    {
+        "symbol": "atom",
+        "denom_contract": "ibc/15E9C5CF5969080539DB395FA7D9C0868265217EFC528433671AAF9B1912D159",
+        "network": "bostrom",
+        "decimal": "6"
+    },
+    {
+        "symbol": "evmos",
+        "denom_contract": "ibc/4B322204B4F59D770680FE4D7A565DDC3F37BFF035474B717476C66A4F83DD72",
+        "network": "bostrom",
+        "decimal": "18"
+    },
+    {
+        "symbol": "dsm",
+        "denom_contract": "ibc/CA5E8F31288514D728AFD1F0533A7F6902AA1192C88C9540F814893C3EAFE244",
+        "network": "bostrom",
+        "decimal": "6"
+    },
+    {
+        "symbol": "cmdx",
+        "denom_contract": "ucmdx",
+        "network": "comdex",
+        "decimal": "6"
+    },
+    {
+        "symbol": "xprt",
+        "denom_contract": "ibc/E437FFE5ABB5163FA7968BAF68146512B81E842DF05BA27E3B25E64B7CDC9AC7",
+        "network": "comdex",
+        "decimal": "6"
+    },
+    {
+        "symbol": "lunc",
+        "denom_contract": "uluna",
+        "network": "terra",
+        "decimal": "6"
+    },
+    {
+        "symbol": "ustc",
+        "denom_contract": "uusd",
+        "network": "terra",
+        "decimal": "6"
+    },
+    {
+        "symbol": "kuji",
+        "denom_contract": "terra1xfsdgcemqwxp4hhnyk4rle6wr22sseq7j07dnn",
+        "network": "terra",
+        "decimal": "6"
+    },
+    {
+        "symbol": "mars",
+        "denom_contract": "terra12hgwnpupflfpuual532wgrxu2gjp0tcagzgx4n",
+        "network": "terra",
+        "decimal": "6"
+    }
+]
