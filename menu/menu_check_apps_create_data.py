@@ -43,9 +43,8 @@ def check_and_create_data():
     print("8. Generate Wallets list")
     print("9. Generate Addresses book")
     print(Fore.CYAN + "=================================================" + Style.RESET_ALL)
-    print("10. Create template json file")
-    print(Fore.YELLOW + "11. Back to main menu" + Style.RESET_ALL)
-    print(Fore.RED + "12. Exit" + Style.RESET_ALL)
+    print(Fore.YELLOW + "10. Back to main menu" + Style.RESET_ALL)
+    print(Fore.RED + "11. Exit" + Style.RESET_ALL)
 
     choice = input("Enter your choice: ")
     if choice == "1":
@@ -92,13 +91,10 @@ def check_and_create_data():
         create_addresses_book(path.create_path, filename.filename_temp_address_book, path.data_path,
                               filename.filename_address_book)
     elif choice == "10":
-        clear_menu(True)
-        create_json_template(path_filename.denoms_book_path, 5)
-    elif choice == "11":
         from menu.main_menu import main_menu
         clear_menu(True)
         return main_menu()
-    elif choice == "12":
+    elif choice == "11":
         print("Exiting program...")
         clear_menu(True)
         exit()

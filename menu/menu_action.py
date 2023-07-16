@@ -148,80 +148,80 @@ def menu_transfer_ibc_osmosis():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_irisnet', 'channel-6', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_irisnet', 'channel-6', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_gravitybridge', 'channel-144', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_gravitybridge', 'channel-144', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_crescent', 'channel-297', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_crescent', 'channel-297', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_axelar', 'channel-208', 240000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_axelar', 'channel-208', 240000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "5":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_fetchhub', 'channel-229', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_fetchhub', 'channel-229', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "6":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_cosmoshub', 'channel-0', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_cosmoshub', 'channel-0', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "7":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_juno', 'channel-42', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_juno', 'channel-42', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "8":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_comdex', 'channel-87', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_comdex', 'channel-87', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "9":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_bostrom', 'channel-95', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_bostrom', 'channel-95', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "10":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'osmosis', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_osmosis', 'digriz_keplr_8_kujira', 'channel-259', 200000,
-                     ledger_clients.osmosis_client, wallets_list.wallet_digriz_keplr_8_osmosis_chain)
+                     'wallet_1_osmosis', 'wallet_1_kujira', 'channel-259', 200000,
+                     ledger_clients.osmosis_client, wallets_list.wallet_1_osmosis_chain)
     elif choice == "11":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -251,32 +251,32 @@ def menu_transfer_ibc_irisnet():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'irisnet', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_irisnet', 'digriz_keplr_8_osmosis', 'channel-3', 150000,
-                     ledger_clients.irisnet_client, wallets_list.wallet_digriz_keplr_8_irisnet_chain)
+                     'wallet_1_irisnet', 'wallet_1_osmosis', 'channel-3', 150000,
+                     ledger_clients.irisnet_client, wallets_list.wallet_1_irisnet_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'irisnet', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_irisnet', 'digriz_keplr_8_gravitybridge', 'channel-29', 150000,
-                     ledger_clients.irisnet_client, wallets_list.wallet_digriz_keplr_8_irisnet_chain)
+                     'wallet_1_irisnet', 'wallet_1_gravitybridge', 'channel-29', 150000,
+                     ledger_clients.irisnet_client, wallets_list.wallet_1_irisnet_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'irisnet', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_irisnet', 'digriz_keplr_8_crescent', 'channel-37', 150000,
-                     ledger_clients.irisnet_client, wallets_list.wallet_digriz_keplr_8_irisnet_chain)
+                     'wallet_1_irisnet', 'wallet_1_crescent', 'channel-37', 150000,
+                     ledger_clients.irisnet_client, wallets_list.wallet_1_irisnet_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'irisnet', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_irisnet', 'digriz_keplr_8_cosmoshub', 'channel-0', 150000,
-                     ledger_clients.irisnet_client, wallets_list.wallet_digriz_keplr_8_irisnet_chain)
+                     'wallet_1_irisnet', 'wallet_1_cosmoshub', 'channel-0', 150000,
+                     ledger_clients.irisnet_client, wallets_list.wallet_1_irisnet_chain)
     elif choice == "5":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -306,32 +306,32 @@ def menu_transfer_ibc_gravitybridge():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'gravitybridge', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_gravitybridge', 'digriz_keplr_8_osmosis', 'channel-10', 150000,
-                     ledger_clients.gravitybridge_client, wallets_list.wallet_digriz_keplr_8_gravitybridge_chain)
+                     'wallet_1_gravitybridge', 'wallet_1_osmosis', 'channel-10', 150000,
+                     ledger_clients.gravitybridge_client, wallets_list.wallet_1_gravitybridge_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'gravitybridge', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_gravitybridge', 'digriz_keplr_8_irisnet', 'channel-47', 150000,
-                     ledger_clients.gravitybridge_client, wallets_list.wallet_digriz_keplr_8_gravitybridge_chain)
+                     'wallet_1_gravitybridge', 'wallet_1_irisnet', 'channel-47', 150000,
+                     ledger_clients.gravitybridge_client, wallets_list.wallet_1_gravitybridge_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'gravitybridge', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_gravitybridge', 'digriz_keplr_8_crescent', 'channel-62', 150000,
-                     ledger_clients.gravitybridge_client, wallets_list.wallet_digriz_keplr_8_gravitybridge_chain)
+                     'wallet_1_gravitybridge', 'wallet_1_crescent', 'channel-62', 150000,
+                     ledger_clients.gravitybridge_client, wallets_list.wallet_1_gravitybridge_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'gravitybridge', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_gravitybridge', 'digriz_keplr_8_bostrom', 'channel-103', 150000,
-                     ledger_clients.gravitybridge_client, wallets_list.wallet_digriz_keplr_8_gravitybridge_chain)
+                     'wallet_1_gravitybridge', 'wallet_1_bostrom', 'channel-103', 150000,
+                     ledger_clients.gravitybridge_client, wallets_list.wallet_1_gravitybridge_chain)
     elif choice == "5":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -364,56 +364,56 @@ def menu_transfer_ibc_crescent():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_irisnet', 'channel-37', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_irisnet', 'channel-37', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_gravitybridge', 'channel-2', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_gravitybridge', 'channel-2', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_osmosis', 'channel-9', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_osmosis', 'channel-9', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_axelar', 'channel-4', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_axelar', 'channel-4', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "5":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_cosmoshub', 'channel-1', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_cosmoshub', 'channel-1', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "6":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_juno', 'channel-3', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_juno', 'channel-3', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "7":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'crescent', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_crescent', 'digriz_keplr_8_comdex', 'channel-26', 160000,
-                     ledger_clients.crescent_client, wallets_list.wallet_digriz_keplr_8_crescent_chain)
+                     'wallet_1_crescent', 'wallet_1_comdex', 'channel-26', 160000,
+                     ledger_clients.crescent_client, wallets_list.wallet_1_crescent_chain)
     elif choice == "8":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -445,48 +445,48 @@ def menu_transfer_ibc_axelar():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'axelar', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_axelar', 'digriz_keplr_8_osmosis', 'channel-3', 160000,
-                     ledger_clients.axelar_client, wallets_list.wallet_digriz_keplr_8_axelar_chain)
+                     'wallet_1_axelar', 'wallet_1_osmosis', 'channel-3', 160000,
+                     ledger_clients.axelar_client, wallets_list.wallet_1_axelar_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'axelar', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_axelar', 'digriz_keplr_8_fetchhub', 'channel-21', 160000,
-                     ledger_clients.axelar_client, wallets_list.wallet_digriz_keplr_8_axelar_chain)
+                     'wallet_1_axelar', 'wallet_1_fetchhub', 'channel-21', 160000,
+                     ledger_clients.axelar_client, wallets_list.wallet_1_axelar_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'axelar', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_axelar', 'digriz_keplr_8_crescent', 'channel-7', 160000,
-                     ledger_clients.axelar_client, wallets_list.wallet_digriz_keplr_8_axelar_chain)
+                     'wallet_1_axelar', 'wallet_1_crescent', 'channel-7', 160000,
+                     ledger_clients.axelar_client, wallets_list.wallet_1_axelar_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'axelar', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_axelar', 'digriz_keplr_8_juno', 'channel-4', 160000,
-                     ledger_clients.axelar_client, wallets_list.wallet_digriz_keplr_8_axelar_chain)
+                     'wallet_1_axelar', 'wallet_1_juno', 'channel-4', 160000,
+                     ledger_clients.axelar_client, wallets_list.wallet_1_axelar_chain)
     elif choice == "5":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'axelar', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_axelar', 'digriz_keplr_8_comdex', 'channel-31', 160000,
-                     ledger_clients.axelar_client, wallets_list.wallet_digriz_keplr_8_axelar_chain)
+                     'wallet_1_axelar', 'wallet_1_comdex', 'channel-31', 160000,
+                     ledger_clients.axelar_client, wallets_list.wallet_1_axelar_chain)
     elif choice == "6":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'axelar', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_axelar', 'digriz_keplr_8_kujira', 'channel-14', 160000,
-                     ledger_clients.axelar_client, wallets_list.wallet_digriz_keplr_8_axelar_chain)
+                     'wallet_1_axelar', 'wallet_1_kujira', 'channel-14', 160000,
+                     ledger_clients.axelar_client, wallets_list.wallet_1_axelar_chain)
     elif choice == "7":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -515,24 +515,24 @@ def menu_transfer_ibc_fetchhub():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'fetchhub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_fetchhub', 'digriz_keplr_8_osmosis', 'channel-10', 160000,
-                     ledger_clients.fetchhub_client, wallets_list.wallet_digriz_keplr_8_fetchhub_chain)
+                     'wallet_1_fetchhub', 'wallet_1_osmosis', 'channel-10', 160000,
+                     ledger_clients.fetchhub_client, wallets_list.wallet_1_fetchhub_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'fetchhub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_fetchhub', 'digriz_keplr_8_axelar', 'channel-14', 160000,
-                     ledger_clients.fetchhub_client, wallets_list.wallet_digriz_keplr_8_fetchhub_chain)
+                     'wallet_1_fetchhub', 'wallet_1_axelar', 'channel-14', 160000,
+                     ledger_clients.fetchhub_client, wallets_list.wallet_1_fetchhub_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'fetchhub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_fetchhub', 'digriz_keplr_8_cosmoshub', 'channel-16', 160000,
-                     ledger_clients.fetchhub_client, wallets_list.wallet_digriz_keplr_8_fetchhub_chain)
+                     'wallet_1_fetchhub', 'wallet_1_cosmoshub', 'channel-16', 160000,
+                     ledger_clients.fetchhub_client, wallets_list.wallet_1_fetchhub_chain)
     elif choice == "4":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -566,64 +566,64 @@ def menu_transfer_ibc_cosmoshub():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_osmosis', 'channel-141', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_osmosis', 'channel-141', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_irisnet', 'channel-91', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_irisnet', 'channel-91', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_crescent', 'channel-326', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_crescent', 'channel-326', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_bostrom', 'channel-341', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_bostrom', 'channel-341', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "5":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_juno', 'channel-207', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_juno', 'channel-207', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "6":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_comdex', 'channel-400', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_comdex', 'channel-400', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "7":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_kujira', 'channel-343', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_kujira', 'channel-343', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "8":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'cosmoshub', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_cosmoshub', 'digriz_keplr_8_fetchhub', 'channel-526', 160000,
-                     ledger_clients.cosmoshub_client, wallets_list.wallet_digriz_keplr_8_cosmoshub_chain)
+                     'wallet_1_cosmoshub', 'wallet_1_fetchhub', 'channel-526', 160000,
+                     ledger_clients.cosmoshub_client, wallets_list.wallet_1_cosmoshub_chain)
     elif choice == "9":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -655,48 +655,48 @@ def menu_transfer_ibc_juno():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'juno', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_juno', 'digriz_keplr_8_osmosis', 'channel-0', 160000,
-                     ledger_clients.juno_client, wallets_list.wallet_digriz_keplr_8_juno_chain)
+                     'wallet_1_juno', 'wallet_1_osmosis', 'channel-0', 160000,
+                     ledger_clients.juno_client, wallets_list.wallet_1_juno_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'juno', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_juno', 'digriz_keplr_8_crescent', 'channel-81', 160000,
-                     ledger_clients.juno_client, wallets_list.wallet_digriz_keplr_8_juno_chain)
+                     'wallet_1_juno', 'wallet_1_crescent', 'channel-81', 160000,
+                     ledger_clients.juno_client, wallets_list.wallet_1_juno_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'juno', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_juno', 'digriz_keplr_8_bostrom', 'channel-93', 160000,
-                     ledger_clients.juno_client, wallets_list.wallet_digriz_keplr_8_juno_chain)
+                     'wallet_1_juno', 'wallet_1_bostrom', 'channel-93', 160000,
+                     ledger_clients.juno_client, wallets_list.wallet_1_juno_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'juno', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_juno', 'digriz_keplr_8_comdex', 'channel-36', 160000,
-                     ledger_clients.juno_client, wallets_list.wallet_digriz_keplr_8_juno_chain)
+                     'wallet_1_juno', 'wallet_1_comdex', 'channel-36', 160000,
+                     ledger_clients.juno_client, wallets_list.wallet_1_juno_chain)
     elif choice == "5":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'juno', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_juno', 'digriz_keplr_8_kujira', 'channel-87', 160000,
-                     ledger_clients.juno_client, wallets_list.wallet_digriz_keplr_8_juno_chain)
+                     'wallet_1_juno', 'wallet_1_kujira', 'channel-87', 160000,
+                     ledger_clients.juno_client, wallets_list.wallet_1_juno_chain)
     elif choice == "6":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'juno', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_juno', 'digriz_keplr_8_cosmoshub', 'channel-1', 160000,
-                     ledger_clients.juno_client, wallets_list.wallet_digriz_keplr_8_juno_chain)
+                     'wallet_1_juno', 'wallet_1_cosmoshub', 'channel-1', 160000,
+                     ledger_clients.juno_client, wallets_list.wallet_1_juno_chain)
     elif choice == "7":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -727,40 +727,40 @@ def menu_transfer_ibc_comdex():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'comdex', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_comdex', 'digriz_keplr_8_osmosis', 'channel-1', 160000,
-                     ledger_clients.comdex_client, wallets_list.wallet_digriz_keplr_8_comdex_chain)
+                     'wallet_1_comdex', 'wallet_1_osmosis', 'channel-1', 160000,
+                     ledger_clients.comdex_client, wallets_list.wallet_1_comdex_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'comdex', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_comdex', 'digriz_keplr_8_crescent', 'channel-49', 160000,
-                     ledger_clients.comdex_client, wallets_list.wallet_digriz_keplr_8_comdex_chain)
+                     'wallet_1_comdex', 'wallet_1_crescent', 'channel-49', 160000,
+                     ledger_clients.comdex_client, wallets_list.wallet_1_comdex_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'comdex', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_comdex', 'digriz_keplr_8_juno', 'channel-18', 160000,
-                     ledger_clients.comdex_client, wallets_list.wallet_digriz_keplr_8_comdex_chain)
+                     'wallet_1_comdex', 'wallet_1_juno', 'channel-18', 160000,
+                     ledger_clients.comdex_client, wallets_list.wallet_1_comdex_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'comdex', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_comdex', 'digriz_keplr_8_cosmoshub', 'channel-37', 160000,
-                     ledger_clients.comdex_client, wallets_list.wallet_digriz_keplr_8_comdex_chain)
+                     'wallet_1_comdex', 'wallet_1_cosmoshub', 'channel-37', 160000,
+                     ledger_clients.comdex_client, wallets_list.wallet_1_comdex_chain)
     elif choice == "5":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'comdex', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_comdex', 'digriz_keplr_8_kujira', 'channel-31', 160000,
-                     ledger_clients.comdex_client, wallets_list.wallet_digriz_keplr_8_comdex_chain)
+                     'wallet_1_comdex', 'wallet_1_kujira', 'channel-31', 160000,
+                     ledger_clients.comdex_client, wallets_list.wallet_1_comdex_chain)
     elif choice == "6":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -790,32 +790,32 @@ def menu_transfer_ibc_bostrom():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'bostrom', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_bostrom', 'digriz_keplr_8_osmosis', 'channel-2', 160000,
-                     ledger_clients.bostrom_client, wallets_list.wallet_digriz_keplr_8_bostrom_chain)
+                     'wallet_1_bostrom', 'wallet_1_osmosis', 'channel-2', 160000,
+                     ledger_clients.bostrom_client, wallets_list.wallet_1_bostrom_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'bostrom', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_bostrom', 'digriz_keplr_8_gravitybridge', 'channel-12', 160000,
-                     ledger_clients.bostrom_client, wallets_list.wallet_digriz_keplr_8_bostrom_chain)
+                     'wallet_1_bostrom', 'wallet_1_gravitybridge', 'channel-12', 160000,
+                     ledger_clients.bostrom_client, wallets_list.wallet_1_bostrom_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'bostrom', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_bostrom', 'digriz_keplr_8_juno', 'channel-10', 160000,
-                     ledger_clients.bostrom_client, wallets_list.wallet_digriz_keplr_8_bostrom_chain)
+                     'wallet_1_bostrom', 'wallet_1_juno', 'channel-10', 160000,
+                     ledger_clients.bostrom_client, wallets_list.wallet_1_bostrom_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'bostrom', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_bostrom', 'digriz_keplr_8_cosmoshub', 'channel-8', 160000,
-                     ledger_clients.bostrom_client, wallets_list.wallet_digriz_keplr_8_bostrom_chain)
+                     'wallet_1_bostrom', 'wallet_1_cosmoshub', 'channel-8', 160000,
+                     ledger_clients.bostrom_client, wallets_list.wallet_1_bostrom_chain)
     elif choice == "5":
         from menu.main_menu import main_menu
         clear_menu(True)
@@ -845,32 +845,32 @@ def menu_transfer_ibc_kujira():
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'kujira', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_kujira', 'digriz_keplr_8_osmosis', 'channel-3', 160000,
-                     ledger_clients.kujira_client, wallets_list.wallet_digriz_keplr_8_kujira_chain)
+                     'wallet_1_kujira', 'wallet_1_osmosis', 'channel-3', 160000,
+                     ledger_clients.kujira_client, wallets_list.wallet_1_kujira_chain)
     elif choice == "2":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'kujira', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_kujira', 'digriz_keplr_8_gravitybridge', 'channel-50', 160000,
-                     ledger_clients.kujira_client, wallets_list.wallet_digriz_keplr_8_kujira_chain)
+                     'wallet_1_kujira', 'wallet_1_gravitybridge', 'channel-50', 160000,
+                     ledger_clients.kujira_client, wallets_list.wallet_1_kujira_chain)
     elif choice == "3":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'kujira', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_kujira', 'digriz_keplr_8_comdex', 'channel-18', 160000,
-                     ledger_clients.kujira_client, wallets_list.wallet_digriz_keplr_8_kujira_chain)
+                     'wallet_1_kujira', 'wallet_1_comdex', 'channel-18', 160000,
+                     ledger_clients.kujira_client, wallets_list.wallet_1_kujira_chain)
     elif choice == "4":
         clear_menu(True)
         symbol_transfer = str(input("Enter the transfer symbol: "))
         amount_transfer = float(input("Enter the transfer amount: "))
         transfer_ibc(symbol_transfer, 'kujira', path_filename.address_book, path_filename.denoms_book_path, 120,
                      amount_transfer,
-                     'digriz_keplr_8_kujira', 'digriz_keplr_8_cosmoshub', 'channel-0', 160000,
-                     ledger_clients.kujira_client, wallets_list.wallet_digriz_keplr_8_kujira_chain)
+                     'wallet_1_kujira', 'wallet_1_cosmoshub', 'channel-0', 160000,
+                     ledger_clients.kujira_client, wallets_list.wallet_1_kujira_chain)
     elif choice == "5":
         from menu.main_menu import main_menu
         clear_menu(True)
