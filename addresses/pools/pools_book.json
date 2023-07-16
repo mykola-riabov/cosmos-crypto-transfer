@@ -1,0 +1,232 @@
+[
+    {
+        "name": "osmo_graviton",
+        "address": "osmo1mxcjnczrsd9ge4pkczpt9e84rntk08h27ez0d36yaxumsk2smdys3vsucj",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_iris",
+        "address": "osmo13jr3p5p070h4pu7sxhtldag9899sev9pwx0r2vlvpkyravpxlqssnzsuq9",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_atom",
+        "address": "osmo1mw0ac6rwlp5r8wapwk3zs6g29h8fcscxqakdzw9emkne6c8wjp9q0t3v8t",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_iov",
+        "address": "osmo1stxalepejns0zm5rpq09jxwcg98r4a2m86kx9n598t32l079pwcsd2wg5n",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_axlusdc",
+        "address": "osmo10venxtvdglryxkdmvjr8wa6n3ugja40rewddlxtg0pr30vmkf47sllgslg",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_ist",
+        "address": "osmo1zml837f5en8x2fvvger70l76cmdahrdv5y6m9e6yk0scnddn5w0qj54m60",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_fet",
+        "address": "osmo1u66wkjthdjxnavklpef7yzasdrvvqhckmhkqsw8uwlad3uaktr3qvny8k4",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_axl",
+        "address": "osmo1ag2w5l8av9msvzhks4vyd920r9lzaesekes6yg3vykp9fch5n22sk6er50",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_bld",
+        "address": "osmo1pc849m5xe9wa7w9r4k2dv7pq958fm84a8t626ftufs8m5rs09guqxx8j3y",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_cmdx",
+        "address": "osmo1ly2shj6fznqwqskswmpwmrkqxdsavhmlmkr92wg3hcqqxnn2y5vsrkhc6u",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_cmst",
+        "address": "osmo1vp9mwqrxt4dsyu4c0hzjpl79sw483wkqsfq8m7jrmjh9775ddn5snw8ccv",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_inj",
+        "address": "osmo1uxqg4sr2yqvamc96n4kwkgna6nmmgtypfdn2gjhvwgymuunq3qlswyrdhg",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_juno",
+        "address": "osmo1h7yfu7x4qsv2urnkl4kzydgxegdfyjdry5ee4xzj98jwz0uh07rqdkmprr",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_lunc",
+        "address": "osmo1f7x8t6zv4tdmu2txgztqc9jwfa0kmx2jpgcmah69njaxc6h5gszsp8884g",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_luna",
+        "address": "osmo15w6vtw48yqell0h4t3dyxhczp7dx0vl4f2xe3dgluyvznjdhhkgqnttcxy",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_ust",
+        "address": "osmo10d8ddsydag5xrnl2kacmkjtdxddstvz4jvraqqpf6ss2n7fy6lkqw4sx2f",
+        "network": "osmosis"
+    },
+    {
+        "name": "osmo_mars",
+        "address": "osmo1752ysawy2adr7td9an30a8pkk8ngrvcq3tan08lvnar3s7f82y5s4dt8fs",
+        "network": "osmosis"
+    },
+    {
+        "name": "evmos_stevmos",
+        "address": "osmo1q80sc32t5nesvl4hyncfrnvj2qhucnl77jxvz977e0rlgc6ljv6q0vftu3",
+        "network": "osmosis"
+    },
+    {
+        "name": "iris_graviton",
+        "address": "iaa1t726jngukd763k64z5z0ex2ncycnjlqvs6anue",
+        "network": "irisnet"
+    },
+    {
+        "name": "iris_atom",
+        "address": "iaa1xpkxaynr5av25n6eepu7eschlxxqzzdu2h8ss7",
+        "network": "irisnet"
+    },
+    {
+        "name": "iris_iov",
+        "address": "iaa13wf3zq4ud4gnyg8mxqadr9mz7svaupgyap6z94",
+        "network": "irisnet"
+    },
+    {
+        "name": "iris_gusdc",
+        "address": "iaa1g26erw0xcex475ta4mvkclj6tl58hdwkmxt5x3",
+        "network": "irisnet"
+    },
+    {
+        "name": "iris_gweth",
+        "address": "iaa1pk755u0w2me8g2g94jzunx9qc8hf82tyu0k95q",
+        "network": "irisnet"
+    },
+    {
+        "name": "bcre_graviton",
+        "address": "cre1ac5q6wtgvhterdwlvzesmsrlky9a0e6lpzv5vg5rmwdph4h3r3tq6wg2kz",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_iris",
+        "address": "cre1pzx8p3ww8s7dl54rwgfdrhdd8mudv79r64e7hhkmlz3d0auls3tsmep2nm",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_harbor",
+        "address": "cre1vwgy5m6e66cv32myrsh84dv0cjpdq7jcngrg297ug9jcqxv6cl2qwm4swf",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_juno",
+        "address": "cre189e2xvprx8y6j2g2qs7swj338knjmml6keahnn0dm4h7gps88rssjvms5d",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_cmdx",
+        "address": "cre1fvztcyr0huzxqrj4958whqr7gyzzamenl8j9plk60k0eugn3na0qw3etw2",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_luna",
+        "address": "cre1dydrtethrxfhfczjagyqt9aw4rk878pa2k4tddr4su6ghmvc8nqs2a3mh5",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_evmos",
+        "address": "cre1nwq5d33puzuvpqcmejpmwd6yf2d3sk4mj4j0pwu3mcqdrc8mexkq92lff8",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_inj",
+        "address": "cre1t3v0rzzwxv8y3hgg9m8qz2kgqp42mvttmltu0ds7emw384zf8jfqkss4gq",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_lunc",
+        "address": "cre1z9m5phqjcg7ndvm72r3fz3d4uvn08axvna7gawuarvt3h2ach4hs57nvr7",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_atom",
+        "address": "cre1hx4rxkhzj7dzgl9zhn0tqx2ytuj9l56qnxfx494sg28juah98sgsnlergv",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_ist",
+        "address": "cre1uys7rv2ra887r3v4nhst584ckq9w9rp2jvzvzpt7yj4wjgl3wemstv964y",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_mars",
+        "address": "cre19erufkqx92qmnrpsqett9yct25kuft4mexjh52yljgnwl8sj8uhsyajyk9",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_axl",
+        "address": "cre1t52dl5k2r5j3pwpd8wl5pd2cw6uwe6rzxead0llqvq4u43h2kcesxpjlhw",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_bld",
+        "address": "cre1fmawylq59cqrsr7x9knnen5g9v5qstpqsljw4llsqa3sde9cljssaljj08",
+        "network": "crescent"
+    },
+    {
+        "name": "cmst_gusdc",
+        "address": "cre1shec4rkq6nevnadqhw6ds228gjrwnde0qdmj7ujpp4fswxxnpxlsfwve8k",
+        "network": "crescent"
+    },
+    {
+        "name": "cmst_axlusdc",
+        "address": "cre1dt34ttlv4548exeytg4a4u32upcwumcdg45l3v9y482nguhw0m9qeth28z",
+        "network": "crescent"
+    },
+    {
+        "name": "ist_axlusdc",
+        "address": "cre1zwv3z9fu0ezx8ual6s8r4z7p6grx9e42egzh24nm77g000nhvq3qw8jyqe",
+        "network": "crescent"
+    },
+    {
+        "name": "ist_gusdc",
+        "address": "cre1pypjg2d92hgpugk9evzzha82u4gkn8md5g3psce5fwvl8945mafsze5k06",
+        "network": "crescent"
+    },
+    {
+        "name": "axlusdc_gusdc",
+        "address": "cre1hn30gnzzeh4j8vxzy340tenurdwz58jp0m6k5ea55swx97vfdvfq3dhk8j",
+        "network": "crescent"
+    },
+    {
+        "name": "gusdc_atom",
+        "address": "cre1rytqnpyunmvzf8szl0a5gqj7hgpz63kwps5k2jxnfnxtwsjew5lq0zv7jw",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_cmst",
+        "address": "cre1p6ff4fpzy2l8lpx0cv8znz0jq4c056xq0f43rzcnvrhn5tfa9ajstyulas",
+        "network": "crescent"
+    },
+    {
+        "name": "bcre_cro",
+        "address": "cre1ej8n3jc0awwvgguz4tgedke33mgsye8fzyjvpmwcjdce9g9tdphs59uyrv",
+        "network": "crescent"
+    },
+    {
+        "name": "juno_atom_junoswap",
+        "address": "juno1sg6chmktuhyj4lsrxrrdflem7gsnk4ejv6zkcc4d3vcqulzp55wsf4l4gl",
+        "network": "juno"
+    }
+]
