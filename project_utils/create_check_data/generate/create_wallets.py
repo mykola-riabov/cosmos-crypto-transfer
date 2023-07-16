@@ -52,8 +52,8 @@ print('Successful Address book generation')
 
         wallet_chain_code = """
 # wallet {}_chain
-wallet_wallet_1_{}_chain = LocalWallet(PrivateKey(bip44_def_ctx_wallet_1.PrivateKey().Raw().ToBytes()), prefix="{}")
-address_wallet_1_{}_chain = wallet_wallet_1_{}_chain.address()
+wallet_1_{}_chain = LocalWallet(PrivateKey(bip44_def_ctx_wallet_1.PrivateKey().Raw().ToBytes()), prefix="{}")
+address_wallet_1_{}_chain = wallet_1_{}_chain.address()
 """.format(chain_name, chain_name, prefix, chain_name, chain_name)
 
         wallet_chain_codes.append(wallet_chain_code)
