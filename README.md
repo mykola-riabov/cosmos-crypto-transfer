@@ -151,12 +151,3 @@ To transfer: menu **1 → 4**, pick source chain and route, then symbol and amou
 ```bash
 python -m unittest discover -s tests -v
 ```
-
-No `wallet.json` or live chain access required.
-
-## Before `git push`
-
-- [ ] No `wallet.json` in the repository
-- [ ] No generated `ledger_clients.py` or `wallets_list.py` in commits
-- [ ] No real mnemonic in code (only placeholders in `wallet.example.json`)
-- [ ] `../source/` is not tracked by git
