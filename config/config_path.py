@@ -1,23 +1,49 @@
+import os
+from pathlib import Path
+
+
+def _project_root() -> Path:
+    return Path(
+        os.environ.get(
+            'COSMOS_PROJECT_ROOT',
+            Path(__file__).resolve().parents[1],
+        )
+    ).resolve()
+
+
+def _source_root(project_root: Path) -> Path:
+    return Path(
+        os.environ.get(
+            'COSMOS_SOURCE_PATH',
+            project_root.parent / 'source',
+        )
+    ).resolve()
+
+
+_project = _project_root()
+_source = _source_root(_project)
+
+
 class ConfigPath:
-    project_path = '/home/digriz/.apps/dev/crypto-manager'
-    source_path = '/home/digriz/.apps/dev/source'
-    backup_path = '/home/digriz/.apps/dev/backup'
-    creds_path = '/home/digriz/.apps/dev/source/creds'
-    data_path = '/home/digriz/.apps/dev/source/data'
-    temp_path = '/home/digriz/.apps/dev/source/temp'
-    assets_path = '/home/digriz/.apps/dev/source/temp/assets'
-    chain_path = '/home/digriz/.apps/dev/source/temp/chain'
-    create_path = '/home/digriz/.apps/dev/source/temp/create'
-    chain_registry_path = '/home/digriz/.apps/dev/source/chain-registry'
-    keplr_chain_registry_path = '/home/digriz/.apps/dev/source/keplr-chain-registry'
-    root_chain_path = '/home/digriz/.apps/dev/crypto-manager/chain'
-    root_client_path = '/home/digriz/.apps/dev/crypto-manager/chain/clients'
-    root_wallet_path = '/home/digriz/.apps/dev/crypto-manager/chain/wallets'
-    root_config_path = '/home/digriz/.apps/dev/crypto-manager/config'
-    root_action_crypto = '/home/digriz/.apps/dev/crypto-manager/action_crypto'
-    root_bank = '/home/digriz/.apps/dev/crypto-manager/action_crypto/bank'
-    root_addresses_path = '/home/digriz/.apps/dev/crypto-manager/addresses'
-    root_denoms_path = '/home/digriz/.apps/dev/crypto-manager/addresses/denoms'
-    root_pools_path = '/home/digriz/.apps/dev/crypto-manager/addresses/pools'
-    data_api_path = '/home/digriz/.apps/dev/source/temp/data_api'
-    logs_path = '/home/digriz/.apps/dev/source/temp/logs'
+    project_path = str(_project)
+    source_path = str(_source)
+    backup_path = str(_source.parent / 'backup')
+    creds_path = str(_source / 'creds')
+    data_path = str(_source / 'data')
+    temp_path = str(_source / 'temp')
+    assets_path = str(_source / 'temp' / 'assets')
+    chain_path = str(_source / 'temp' / 'chain')
+    create_path = str(_source / 'temp' / 'create')
+    chain_registry_path = str(_source / 'chain-registry')
+    keplr_chain_registry_path = str(_source / 'keplr-chain-registry')
+    root_chain_path = str(_project / 'chain')
+    root_client_path = str(_project / 'chain' / 'clients')
+    root_wallet_path = str(_project / 'chain' / 'wallets')
+    root_config_path = str(_project / 'config')
+    root_action_crypto = str(_project / 'action_crypto')
+    root_bank = str(_project / 'action_crypto' / 'bank')
+    root_addresses_path = str(_project / 'addresses')
+    root_denoms_path = str(_project / 'addresses' / 'denoms')
+    root_pools_path = str(_project / 'addresses' / 'pools')
+    data_api_path = str(_source / 'temp' / 'data_api')
+    logs_path = str(_source / 'temp' / 'logs')

@@ -17,8 +17,10 @@ class PathFileName:
     report_filepath_keplr_chain = os.path.join(path.create_path, filename.filename_chain_keplr_data_to_create)
     report_filepath_assets = os.path.join(path.create_path, filename.filename_assets_data_to_create)
     data_cosmos_file_name = os.path.join(path.data_path, filename.filename_cosmos_data)
-    db_keepass_filepath = os.path.join(path.creds_path, filename.filename_db_crypto_managements)
-    key_keepass_filepath = os.path.join(path.creds_path, filename.filename_key_crypto_managements)
+    wallet_json_filepath = os.path.join(path.creds_path, filename.filename_wallet_json)
+    wallet_json_example_filepath = os.path.join(
+        path.root_config_path, filename.filename_wallet_json_example
+    )
     google_api_key = os.path.join(path.creds_path, filename.filename_google_api)
     wallets_list_path = os.path.join(path.root_wallet_path, filename.filename_wallets_list)
     address_book_temp = os.path.join(path.create_path, filename.filename_temp_address_book)

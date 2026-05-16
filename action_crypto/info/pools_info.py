@@ -1,108 +1,111 @@
 import json
+import signal
+import time
+
 import curses
 import requests
-import time
 from tabulate import tabulate
-import signal
+
+from project_utils.chain_resources import build_client_map
+from project_utils.denoms_lookup import load_denoms_index
 
 
-def check_custom_balances_pool_book(filepath_json1, filepath_json2, filepath_json3, filepath_py, pool_names,
-                                    update_interval):
-    def signal_handler(signal, frame):
-        print('Execution terminated.')
-        curses.echo()
-        curses.nocbreak()
-        stdscr.keypad(False)
-        curses.endwin()
-        exit(0)
+def check_custom_balances_pool_book(
+    filepath_mapping,
+    filepath_pools_book,
+    filepath_denoms_book,
+    _filepath_py_unused=None,
+    pool_names=None,
+    update_interval=20,
+):
+    pool_names = pool_names or []
 
-    signal.signal(signal.SIGINT, signal_handler)
+    with open(filepath_mapping, 'r', encoding='utf-8') as f1, open(filepath_pools_book, 'r', encoding='utf-8') as f2:
+        mapping_data = json.load(f1)
+        pools_data = json.load(f2)
+
+    try:
+        variable_values, missed_from_map = build_client_map(mapping_data)
+    except (ModuleNotFoundError, AttributeError) as exc:
+        print(f'Error loading ledger clients: {exc}')
+        return
+
+    denom_index = load_denoms_index(filepath_denoms_book)
+    denom_names = {item['denom_contract']: item['symbol'] for item in denom_index.values()}
+    denom_decimal = {
+        item['denom_contract']: 10 ** int(item['decimal']) for item in denom_index.values()
+    }
 
     stdscr = curses.initscr()
     curses.noecho()
     curses.cbreak()
     stdscr.keypad(True)
 
-    try:
-
-        while True:
-            stdscr.clear()
-            with open(filepath_json1, 'r') as f1, open(filepath_json2, 'r') as f2, open(filepath_json3, 'r') as f3:
-                json_data_1 = json.load(f1)
-                json_data_2 = json.load(f2)
-                json_data_3 = json.load(f3)
-                # create denom name dictionary
-                denom_names = {d["denom_contract"]: d["symbol"] for d in json_data_3}
-                denom_decimal = {d["denom_contract"]: 10 ** int(d["decimal"]) for d in json_data_3}
-
-            with open(filepath_py, 'r') as f4:
-                code = f4.read()
-                exec(code)
-
-            variable_values = {}
-            for entry in json_data_1:
-                variable_name = entry['network']
-                if variable_name + '_client' not in locals():
-                    print(f'Error: variable {variable_name}_client not found')
-                    continue
-                variable_value = eval(variable_name + '_client')
-                variable_values[variable_name] = variable_value
-
-            missed_clients = []
-            data = []
-            headers = ['Pools Name', 'Network', 'Balance', 'Denom']
-            for addr in json_data_2:
-                network = addr["network"]
-                pool_name = addr["name"]
-                if pool_name not in pool_names:
-                    continue
-                if network not in variable_values:
-                    missed_clients.append(network)
-                    continue
-                client = variable_values[network]
-                if "address" in addr:
-                    if pool_name not in pool_names:
-                        continue
-                    address = addr["address"]
-                    balance_amount = "error network"
-                    denom_name = "error network"
-                    try:
-                        balance = client.query_bank_all_balances(address)
-                        # append balance data to the data list
-                        for balance_item in balance:
-                            denom_name = denom_names.get(balance_item.denom)
-                            denom_decimal_value = denom_decimal.get(balance_item.denom)
-                            if denom_decimal_value is None:
-                                denom_decimal_value = 1
-                            balance_amount = int(balance_item.amount) / denom_decimal_value
-                            if denom_name is None:
-                                denom_name = balance_item.denom
-                            data.append([pool_name, network, balance_amount, denom_name])
-                    except (requests.exceptions.HTTPError, requests.exceptions.RequestException) as e:
-                        if isinstance(e, requests.exceptions.HTTPError) and e.response.status_code == 504:
-                            balance_amount = "timeout"
-                            denom_name = denom_names.get(balance_item.denom, balance_item.denom)
-                            data.append([pool_name, network, balance_amount, denom_name])
-                        else:
-                            print(f"Error occurred during processing balance: {e}")
-                            data.append([pool_name, network, "error network", "error network"])
-                    except requests.exceptions.HTTPError as e:
-                        print(f'Error: Failed to make request for network {network} and address {address}: {e}')
-                        data.append([pool_name, network, "error network", "error network"])
-
-            if missed_clients:
-                print(f'Missed clients: {", ".join(missed_clients)}')
-
-            stdscr.addstr(0, 0, tabulate(data, headers=headers, tablefmt='grid', numalign='right', floatfmt='.2f'))
-            stdscr.refresh()
-
-            time.sleep(update_interval)
-
-
-    except KeyboardInterrupt:
-        print("Execution terminated.")
+    def _cleanup():
         curses.echo()
         curses.nocbreak()
         stdscr.keypad(False)
         curses.endwin()
-        exit(0)
+
+    def signal_handler(sig, frame):
+        _cleanup()
+        print('Execution terminated.')
+        raise SystemExit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+
+    try:
+        while True:
+            stdscr.clear()
+            missed_clients = list(missed_from_map)
+            data = []
+            headers = ['Pools Name', 'Network', 'Balance', 'Denom']
+
+            for addr in pools_data:
+                network = addr['network']
+                pool_name = addr['name']
+                if pool_name not in pool_names:
+                    continue
+                if network not in variable_values:
+                    if network not in missed_clients:
+                        missed_clients.append(network)
+                    continue
+                if 'address' not in addr:
+                    continue
+
+                client = variable_values[network]
+                address = addr['address']
+                try:
+                    balance = client.query_bank_all_balances(address)
+                    for balance_item in balance:
+                        denom_name = denom_names.get(balance_item.denom)
+                        denom_decimal_value = denom_decimal.get(balance_item.denom, 1)
+                        balance_amount = int(balance_item.amount) / denom_decimal_value
+                        if denom_name is None:
+                            denom_name = balance_item.denom
+                        data.append([pool_name, network, balance_amount, denom_name])
+                except requests.exceptions.HTTPError as e:
+                    if e.response is not None and e.response.status_code == 504:
+                        data.append([pool_name, network, 'timeout', '—'])
+                    else:
+                        data.append([pool_name, network, 'error network', 'error network'])
+                except (requests.exceptions.RequestException, ConnectionError, RuntimeError, AttributeError) as e:
+                    print(f'Error occurred during processing balance: {e}')
+                    data.append([pool_name, network, 'error network', 'error network'])
+
+            if missed_clients:
+                stdscr.addstr(0, 0, f'Missed clients: {", ".join(sorted(set(missed_clients)))}\n')
+
+            table = tabulate(data, headers=headers, tablefmt='grid', numalign='right', floatfmt='.2f')
+            row_offset = 2 if missed_clients else 0
+            for line_idx, line in enumerate(table.splitlines()):
+                try:
+                    stdscr.addstr(row_offset + line_idx, 0, line[: curses.COLS - 1])
+                except curses.error:
+                    break
+            stdscr.refresh()
+            time.sleep(update_interval)
+
+    except (KeyboardInterrupt, SystemExit):
+        _cleanup()
+        print('Execution terminated.')

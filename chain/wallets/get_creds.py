@@ -1,7 +1,9 @@
-import pykeepass
+import json
 import os
-from config.config_path import ConfigPath
+from typing import Optional
+
 from config.config_files import FileName
+from config.config_path import ConfigPath
 from config.config_path_files import PathFileName
 
 path = ConfigPath()
@@ -9,27 +11,56 @@ filename = FileName()
 path_filename = PathFileName()
 
 
-def get_creds_info():
+class CredentialsError(RuntimeError):
+    pass
 
-    if not os.path.exists(path.creds_path):
-        print('Error: directory not found:', path.creds_path)
-        return
-    if not os.path.exists(path_filename.db_keepass_filepath):
-        print('Error: DB file not found')
-        return
-    if not os.path.exists(path_filename.key_keepass_filepath):
-        print('Error: key file not found')
-        return
 
-    # open database with key
-    with pykeepass.PyKeePass(path_filename.db_keepass_filepath, keyfile=path_filename.key_keepass_filepath) as kp:
-        # find the desired record in the database
-        group = kp.find_groups(name=filename.group_keepass, first=True)
-        entry = kp.find_entries(title=filename.title_keepass, group=group, first=True)
+def get_wallet_json_path() -> str:
+    return os.environ.get(
+        'COSMOS_WALLET_FILE',
+        path_filename.wallet_json_filepath,
+    )
 
-        # get the value of the mnemonic field
-        mnemonic_1 = entry.get_custom_property(filename.mnemonic_1_keepass)
-        api = entry.get_custom_property('api')
-        return {f'{filename.mnemonic_1_keepass}': mnemonic_1,
-                'api': api
-                }
+
+def load_wallet_json(path: Optional[str] = None) -> dict:
+    wallet_path = path or get_wallet_json_path()
+    if not os.path.isfile(wallet_path):
+        example = path_filename.wallet_json_example_filepath
+        raise CredentialsError(
+            f'Wallet file not found: {wallet_path}\n'
+            f'Copy {example} to {wallet_path} and set your mnemonic.'
+        )
+    with open(wallet_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    if not isinstance(data, dict):
+        raise CredentialsError(f'Wallet file must be a JSON object: {wallet_path}')
+    return data
+
+
+def get_mnemonic(wallet_key: Optional[str] = None) -> str:
+    """Return BIP39 mnemonic for the default or named wallet."""
+    data = load_wallet_json()
+    key = wallet_key or filename.mnemonic_wallet_key
+
+    mnemonic = data.get(key)
+    if not mnemonic and key != 'mnemonic':
+        mnemonic = data.get('mnemonic')
+    if not mnemonic:
+        raise CredentialsError(
+            f'Mnemonic not found in wallet JSON (expected key {key!r} or "mnemonic").'
+        )
+
+    mnemonic = str(mnemonic).strip()
+    if not mnemonic:
+        raise CredentialsError('Mnemonic is empty.')
+    return mnemonic
+
+
+def get_creds_info() -> dict:
+    """Backward-compatible dict for generated wallets_list.py."""
+    data = load_wallet_json()
+    mnemonic = get_mnemonic()
+    return {
+        filename.mnemonic_wallet_key: mnemonic,
+        'api': data.get('api'),
+    }

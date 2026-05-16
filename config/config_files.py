@@ -34,13 +34,10 @@ class FileName:
     filename_grpc_link_to_create = 'grpc_links_report.json'
     project_file_ledger_client = 'ledger_clients.py'
 # ======================================================================================================================
-    filename_db_crypto_managements = 'cosmos_crypto.kdbx'
-    filename_key_crypto_managements = 'crypto_key'
+    filename_wallet_json = 'wallet.json'
+    filename_wallet_json_example = 'wallet.example.json'
     filename_google_api = 'gacc.json'
-    group_keepass = 'crypto_management'
-    title_keepass = 'creds'
-    mnemonic_name = 'mnemonic'
-    mnemonic_1_keepass = mnemonic_name + SuffixFileName.suffix_wallet_1
+    mnemonic_wallet_key = 'mnemonic' + SuffixFileName.suffix_wallet_1
 # ======================================================================================================================
     filename_dict_chain_id = 'list_chain_id.json'
     filename_wallets_list = 'wallets_list.py'

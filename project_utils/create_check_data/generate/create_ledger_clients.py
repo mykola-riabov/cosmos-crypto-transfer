@@ -5,6 +5,13 @@ import os
 init(autoreset=True)
 
 
+def to_python_identifier(chain_name: str) -> str:
+    ident = chain_name.replace('-', '_')
+    if ident and ident[0].isdigit():
+        ident = f'chain_{ident}'
+    return ident
+
+
 def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosmos, root_client_path,
                                  filename_ledger_client):
     # check if cosmos_data_list.json exists
@@ -15,7 +22,7 @@ def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosm
     if not os.path.exists(os.path.join(data_path, filename_cosmos)):
         print('Error: cosmos_data_list.json file not found')
         return
-    link_type = input("Select link type (rest_link or keplr_rest_link): ")
+    selected_link_type = input("Select link type (rest_link or keplr_rest_link): ").strip()
 
     with open(os.path.join(data_path, filename_cosmos)) as f:
         data = json.load(f)
@@ -29,17 +36,14 @@ def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosm
         num_clients = 0
         chain_names = []
         for chain in data:
-            chain_name = chain['chain_name']
-            link_type = link_type
-            if chain_name[0].isdigit():
-                chain_name = 'edit' + chain_name[1:]
+            network_name = chain['chain_name']
+            chain_name = to_python_identifier(network_name)
             url = None
-            if 'keplr_rest_link' not in chain:
-                chain[link_type] = chain['rest_link']
-            if 'rest_link' not in chain or chain['rest_link'] is None:
-                chain[link_type] = chain['keplr_rest_link']
-            if chain[link_type]:
-                url = 'rest+' + chain[link_type]
+            link = chain.get(selected_link_type)
+            if link is None:
+                link = chain.get('rest_link') or chain.get('keplr_rest_link')
+            if link:
+                url = 'rest+' + link
 
             chain_id = chain['chain_id']
             fee_minimum_gas_price = chain['low_gas_price']
@@ -63,7 +67,7 @@ def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosm
             f.write(f"{chain_name}_network_settings.validate()\n")
             f.write(f"{chain_name}_client = LedgerClient({chain_name}_network_settings)\n\n")
             num_clients += 1
-            print(f"{chain_name}: {link_type} - {url}")
+            print(f"{network_name} ({chain_name}): {selected_link_type} - {url}")
 
     print(Fore.YELLOW + 'ledger_clients_generated.py file generated successfully' + Style.RESET_ALL)
     print(Fore.GREEN + f'{num_clients} ledger clients generated for chains:' + Style.RESET_ALL)
@@ -89,10 +93,11 @@ def create_ledger_client_mapping(input_file, output_file):
         data = json.load(f)
     network_client_mapping = []
     for chain in data:
-        chain_name = chain['chain_name']
+        network_name = chain['chain_name']
+        python_name = to_python_identifier(network_name)
         network_client_mapping.append({
-            'network': chain_name,
-            'client': chain_name + '_client'
+            'network': network_name,
+            'client': python_name + '_client',
         })
     # Sort the data alphabetically based on the 'network' key
     network_client_mapping = sorted(network_client_mapping, key=lambda x: x['network'])

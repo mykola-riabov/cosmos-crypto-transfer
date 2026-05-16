@@ -1,108 +1,112 @@
-import time
 import json
-import logging
-import google
-import datetime
+import time
+from datetime import datetime, timezone
+
 from cosmpy.aerial.client.utils import prepare_and_broadcast_basic_transaction
-from cosmpy.aerial.tx import Transaction
+from cosmpy.aerial.tx import Transaction, TxFee
 from cosmpy.protos.cosmos.base.v1beta1.coin_pb2 import Coin
 from cosmpy.protos.ibc.applications.transfer.v1.tx_pb2 import MsgTransfer
-from config.config_path_files import PathFileName
 
-path_filename = PathFileName()
+from project_utils.address_book import resolve_wallets
+from project_utils.denoms_lookup import convert_amount, load_denoms_index, resolve_denom
+from project_utils.logging_setup import setup_logging
 
 
-def transfer_ibc(symbol, network, path_address_book, path_denoms_book, timeout_second, amount, sender_wallet,
-                 receiver_wallet, channel_ibc, gas, client, wallet):
-    logging.basicConfig(
-        format='%(asctime)s %(levelname)s %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
-        level=logging.INFO,
-        filename=path_filename.transaction_log
+def transfer_ibc(
+    symbol,
+    network,
+    path_address_book,
+    path_denoms_book,
+    timeout_second,
+    amount,
+    sender_wallet,
+    receiver_wallet,
+    channel_ibc,
+    gas,
+    client,
+    wallet,
+):
+    logger = setup_logging()
+    nanos_per_second = int(10 ** 9)
+    time_out = (int(time.time()) * nanos_per_second) + (nanos_per_second * timeout_second)
+    formatted_dt = datetime.fromtimestamp(time_out // nanos_per_second, tz=timezone.utc).strftime(
+        '%Y-%m-%d %H:%M:%S UTC'
     )
-    time_convert = int(10 ** 9)
-    # two minutes
-    time_out = (int(time.time()) * time_convert) + (time_convert * timeout_second)
-    dt = datetime.datetime.utcfromtimestamp(time_out // 1000000000)
-    formatted_dt = dt.strftime('%Y-%m-%d %H:%M:%S')
     amount_token = float(amount)
-    with open(path_address_book, 'r') as f1, open(path_denoms_book, 'r') as f2:
+
+    with open(path_address_book, 'r', encoding='utf-8') as f1, open(path_denoms_book, 'r', encoding='utf-8') as f2:
         data_address = json.load(f1)
-        data_denom = json.load(f2)
+        sender_name, sender_address, receiver_name, receiver_address = resolve_wallets(
+            data_address, sender_wallet, receiver_wallet
+        )
+        denom_index = load_denoms_index(path_denoms_book)
+        denom_contract, decimal_token = resolve_denom(denom_index, symbol, network)
+        amount_convert = convert_amount(amount_token, decimal_token)
 
-        sender_name = None
-        receiver_name = None
-        for item in data_address:
-            name_wallet = item["name"]
-            address_data = item["address"]
-            if name_wallet != sender_wallet and name_wallet != receiver_wallet:
-                continue
-            if name_wallet == sender_wallet:
-                sender_wallet = address_data
-                sender_name = name_wallet
-            if name_wallet == receiver_wallet:
-                receiver_wallet = address_data
-                receiver_name = name_wallet
-        if sender_name is None and receiver_name is None:
-            raise ValueError("Sender and receiver wallet not found in address book")
-
-        denom_contract = None
-        decimal_token = None
-        for item in data_denom:
-            symbol_data = item["symbol"]
-            network_data = item["network"]
-            denom_contract = item["denom_contract"]
-            decimal_token = item["decimal"]
-            if symbol_data != symbol or network_data != network:
-                continue
-            denom_contract = item.get('denom_contract')
-            decimal_token = item.get('decimal')
-            break
-        if denom_contract is None or decimal_token is None:
-            raise ValueError("Symbol and network pair not found in denoms book")
-        amount_convert = int(float(amount_token) * (10 ** int(decimal_token)))
     tx = Transaction()
     tx.add_message(
         MsgTransfer(
-            source_port="transfer",
+            source_port='transfer',
             source_channel=channel_ibc,
             token=Coin(denom=denom_contract, amount=str(amount_convert)),
-            sender=sender_wallet,
-            receiver=receiver_wallet,
-            timeout_timestamp=time_out
+            sender=sender_address,
+            receiver=receiver_address,
+            timeout_timestamp=time_out,
         )
     )
-    print(f'Sender wallet: {sender_name}: sender address: {sender_wallet}')
-    print(f'Receiver wallet: {receiver_name}: receiver address: {receiver_wallet}')
+
+    print(f'Sender wallet: {sender_name}: sender address: {sender_address}')
+    print(f'Receiver wallet: {receiver_name}: receiver address: {receiver_address}')
     print(
-        f'denom contract: {denom_contract}\nsymbol sender: {symbol}\nnetwork sender: {network}\ndecimal: {decimal_token}')
-    print(f'Time out {time_out} in epoh\nTime out in second {timeout_second}\nTime out in date {formatted_dt}')
+        f'denom contract: {denom_contract}\n'
+        f'symbol sender: {symbol}\n'
+        f'network sender: {network}\n'
+        f'decimal: {decimal_token}'
+    )
+    print(
+        f'Time out {time_out} (nanoseconds)\n'
+        f'Time out in seconds {timeout_second}\n'
+        f'Time out in date {formatted_dt}'
+    )
     print(f'Amount transfer {amount_token}')
     print(f'Amount original {amount_convert}')
+    print(f'Gas limit {gas}')
     print('=====================')
-    print(tx.msgs)
-    # logging.info(f'Sender wallet: {sender_name}: sender address: {sender_wallet}')
-    # Obtaining confirmation from the user
-    user_input = input("Are you sure you want to execute the transaction? (yes/no): ")
-    # Checking the input value
-    if user_input.lower() == "yes":
-        tx = prepare_and_broadcast_basic_transaction(client, tx, wallet, gas_limit=gas)
-        tx_hash = tx.tx_hash
-        logging.info(f'sender_wallet: {sender_name},'
-                     f'sender_address: {sender_wallet},'
-                     f'receiver_wallet: {receiver_name},'
-                     f'receiver_address: {receiver_wallet},'
-                     f'denom_contract: {denom_contract},'
-                     f'symbol_sender: {symbol},'
-                     f'network_sender: {network},'
-                     f'decimal: {decimal_token},'
-                     f'time_out: {time_out},'
-                     f'time_out_second: {timeout_second},'
-                     f'time_out_date: {formatted_dt},'
-                     f'amount_transfer: {amount_token},'
-                     f'amount_original: {amount_convert},'
-                     f'tx_hash: {tx_hash}')
-        print("Transaction successfully executed!")
-        print(f'Transaction hash: {tx_hash}')
-    else:
-        print("Operation cancelled by the user.")
+
+    confirm_amount = input(f'Re-enter amount to confirm ({amount_token}): ').strip()
+    try:
+        if float(confirm_amount) != amount_token:
+            print('Amount mismatch. Operation cancelled.')
+            return
+    except ValueError:
+        print('Invalid amount. Operation cancelled.')
+        return
+
+    user_input = input('Type "yes" to execute the transaction: ').strip().lower()
+    if user_input != 'yes':
+        print('Operation cancelled by the user.')
+        return
+
+    tx = prepare_and_broadcast_basic_transaction(client, tx, wallet, fee=TxFee(gas_limit=gas))
+    tx_hash = tx.tx_hash
+    logger.info(
+        'IBC transfer: sender_wallet=%s sender_address=%s receiver_wallet=%s receiver_address=%s '
+        'denom=%s symbol=%s network=%s decimal=%s timeout=%s timeout_seconds=%s timeout_date=%s '
+        'amount=%s amount_raw=%s tx_hash=%s',
+        sender_name,
+        sender_address,
+        receiver_name,
+        receiver_address,
+        denom_contract,
+        symbol,
+        network,
+        decimal_token,
+        time_out,
+        timeout_second,
+        formatted_dt,
+        amount_token,
+        amount_convert,
+        tx_hash,
+    )
+    print('Transaction successfully executed!')
+    print(f'Transaction hash: {tx_hash}')

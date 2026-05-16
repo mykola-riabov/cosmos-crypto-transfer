@@ -1,0 +1,8 @@
+cosmpy
+grpcio>=1.60.0
+protobuf
+cosmospy-protobuf
+bip-utils
+colorama
+tabulate
+requests

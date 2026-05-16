@@ -1,6 +1,34 @@
 .idea/
-/.idea/
-**/__pycache__
-__pycache__/
-/source
-/creds
+.vscode/
+*.swp
+*.swo
+*~
+
+**/__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+env/
+
+# Локальные данные вне репозитория (см. README)
+source/
+../source/
+backup/
+../backup/
+creds/
+**/wallet.json
+.env
+
+# Генерируемые файлы (создаются меню «Check and create data»)
+chain/clients/ledger_clients.py
+chain/wallets/wallets_list.py
+
+# Логи
+*.log
+
+# Тесты / coverage
+.pytest_cache/
+.coverage
+htmlcov/

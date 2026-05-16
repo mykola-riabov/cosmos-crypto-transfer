@@ -6,9 +6,8 @@ class ListData:
     keys_to_extract_link_data = ['chain_name', 'apis']
     keys_to_extract_assets_data = ['chain_name', 'denom_units']
     modules_list = [
-        'cosmpy', 'grpcio==1.51.1', 'protobuf', 'pykeepass',
-        'colorama', 'tabulate', 'schedule', 'termcolor',
-        'urwid', 'google', 'oauth2client', 'cosmospy-protobuf'
+        'cosmpy', 'grpcio', 'protobuf', 'cosmospy-protobuf', 'bip-utils',
+        'colorama', 'tabulate', 'requests',
     ]
     chain_list_work = [
         'kava', 'axelar', 'osmosis', 'cosmoshub', 'kujira', 'crescent',

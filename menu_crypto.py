@@ -1,6 +1,13 @@
-from menu.main_menu import main_menu
+#!/usr/bin/env python3
+"""Entry point for Cosmos Crypto Transfer CLI."""
+import sys
+from pathlib import Path
 
-main_menu()
+_PROJECT_ROOT = Path(__file__).resolve().parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
 
-if __name__ == "__main__":
+from menu.main_menu import main_menu  # noqa: E402
+
+if __name__ == '__main__':
     main_menu()
