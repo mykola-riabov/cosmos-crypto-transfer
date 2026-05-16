@@ -1,36 +1,58 @@
 # cosmos-crypto-transfer
 
-CLI для **IBC-переводов** между сетями Cosmos, просмотра балансов и адресной книги. Использует **таймаут по времени** (по умолчанию 120 с), а не по высоте блока — удобнее для арбитража, чем многие кошельки.
+CLI for **IBC token transfers** across Cosmos chains, balance checks, and address book management. Uses a **time-based timeout** (default 120 seconds) instead of a block-height timeout, which is often better for arbitrage than typical wallets.
 
-## Репозиторий и локальные данные
+## Screenshots
 
-Код живёт в этом git-репозитории. **Секреты и тяжёлые данные — снаружи**, в каталоге `source/` рядом с проектом (по умолчанию `../source` от корня репозитория). В git не попадают:
+Main menu:
 
-| Путь (вне репо) | Содержимое |
-|-----------------|------------|
-| `source/creds/wallet.json` | мнемоника (только у вас на диске) |
-| `source/data/` | address book, mapping, cosmos_data_list |
-| `source/chain-registry/` | клон [chain-registry](https://github.com/cosmos/chain-registry) |
-| `source/temp/` | логи, промежуточные JSON |
+![main menu](screen/main.png)
 
-Так можно спокойно делать `git push` без риска утечки seed-фразы.
+Address book:
+
+![address book](screen/book.png)
+
+Osmosis DEX token info:
+
+![token prices](screen/price.png)
+
+Actions menu:
+
+![actions](screen/action.png)
+
+IBC transfer:
+
+![transfer](screen/transfer.png)
+
+## Repository vs local data
+
+Application code lives in this git repository. **Secrets and heavy data stay outside** the repo, in a `source/` directory next to the project (default: `../source` relative to the repo root):
+
+| Path (outside repo) | Contents |
+|-------------------|----------|
+| `source/creds/wallet.json` | mnemonic (local only) |
+| `source/data/` | address book, client mapping, cosmos_data_list |
+| `source/chain-registry/` | clone of [chain-registry](https://github.com/cosmos/chain-registry) |
+| `source/temp/` | logs, intermediate JSON |
+
+This keeps `git push` safe: no seed phrase in the repository.
 
 ```
 mygit/
-├── cosmos-crypto-transfer/    ← этот репозиторий (код, config, tests)
-└── source/                    ← локально, в .gitignore
+├── cosmos-crypto-transfer/    ← this repo (code, config, tests)
+└── source/                    ← local only (.gitignore)
     ├── creds/wallet.json
     ├── data/
     └── ...
 ```
 
-## Требования
+## Requirements
 
 - Linux
 - Python 3.10+
 - Git, pip
 
-## Установка
+## Install
 
 ```bash
 git clone <repo-url> cosmos-crypto-transfer
@@ -40,72 +62,73 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 
-python -m unittest discover -s tests -v   # без мнемоники
+python -m unittest discover -s tests -v   # no mnemonic required
 ```
 
-## Первый запуск
+## First run
 
 ```bash
 python menu_crypto.py
 ```
 
-Рекомендуемая последовательность в меню **«3. Check and create data»**:
+Recommended flow under **“3. Check and create data”**:
 
-| Шаг | Пункт | Действие |
-|-----|-------|----------|
-| 1 | 1 | Создать `source/`, клонировать chain-registry |
-| 2 | 4 | Проверить зависимости (`requirements.txt`) |
-| 3 | 6 | Собрать `cosmos_data_list.json` |
-| 4 | 7 | Сгенерировать `chain/clients/ledger_clients.py` |
-| 5 | 8 | Сгенерировать `chain/wallets/wallets_list.py` |
-| 6 | 9 | Сгенерировать `source/data/address_book.json` |
+| Step | Menu item | Action |
+|------|-----------|--------|
+| 1 | 1 | Create `source/`, clone chain-registry |
+| 2 | 4 | Install dependencies (`requirements.txt`) |
+| 3 | 6 | Build `cosmos_data_list.json` |
+| 4 | 7 | Generate `chain/clients/ledger_clients.py` |
+| 5 | 8 | Generate `chain/wallets/wallets_list.py` |
+| 6 | 9 | Generate `source/data/address_book.json` |
 
-Запускайте **`python menu_crypto.py`** из корня репозитория — `PYTHONPATH` настраивается автоматически.
+Run **`python menu_crypto.py`** from the repository root; `PYTHONPATH` is set automatically.
 
-## Учётные данные
+## Credentials
 
-1. Скопируйте шаблон:
+1. Copy the template:
    ```bash
    mkdir -p ../source/creds
    cp config/wallet.example.json ../source/creds/wallet.json
    chmod 600 ../source/creds/wallet.json
    ```
-2. Впишите мнемонику в поле `mnemonic_wallet_1` (или `mnemonic`).
-3. **Не коммитьте** `wallet.json` — он уже в `.gitignore`.
+2. Set your mnemonic in `mnemonic_wallet_1` (or `mnemonic`).
+3. **Never commit** `wallet.json` — it is listed in `.gitignore`.
 
-Для сетей с нестандартным HD-path (например **Agoric**, slip44 `564`) укажите `"slip44": 564` в записи сети в `cosmos_data_list.json` перед шагом 8.
+For chains with a non-default HD path (e.g. **Agoric**, slip44 `564`), add `"slip44": 564` to that chain’s entry in `cosmos_data_list.json` before step 8.
 
-## Переменные окружения
+## Environment variables
 
-См. `.env.example`:
+See `.env.example`:
 
-| Переменная | По умолчанию |
-|------------|----------------|
-| `COSMOS_PROJECT_ROOT` | каталог с `menu_crypto.py` |
+| Variable | Default |
+|----------|---------|
+| `COSMOS_PROJECT_ROOT` | directory containing `menu_crypto.py` |
 | `COSMOS_SOURCE_PATH` | `../source` |
 | `COSMOS_WALLET_FILE` | `source/creds/wallet.json` |
 
-## Структура репозитория
+## Project layout
 
 ```
 cosmos-crypto-transfer/
 ├── menu_crypto.py
 ├── menu/
-├── action_crypto/          # балансы, IBC, Osmosis DEX info
+├── action_crypto/          # balances, IBC, Osmosis DEX info
 ├── config/
-│   ├── ibc_routes.json     # маршруты IBC (редактируемый)
-│   └── wallet.example.json # шаблон creds (без реальной фразы)
+│   ├── ibc_routes.json     # IBC routes (editable)
+│   └── wallet.example.json # creds template (placeholders only)
 ├── addresses/              # denoms_book, pools_book
 ├── chain/
-│   ├── clients/            # ledger_clients.py — генерируется
-│   └── wallets/            # wallets_list.py — генерируется
+│   ├── clients/            # ledger_clients.py — generated
+│   └── wallets/            # wallets_list.py — generated
 ├── project_utils/
+├── screen/                 # UI screenshots
 └── tests/
 ```
 
-## IBC-маршруты
+## IBC routes
 
-Все маршруты в `config/ibc_routes.json`. Пример:
+All routes are defined in `config/ibc_routes.json`. Example:
 
 ```json
 {
@@ -121,23 +144,19 @@ cosmos-crypto-transfer/
 }
 ```
 
-Перевод: меню **1 → 4**, выбор сети и маршрута, символ и сумма из `denoms_book.json`.
+To transfer: menu **1 → 4**, pick source chain and route, then symbol and amount from `denoms_book.json`.
 
-## Тесты
+## Tests
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-Не требуют `wallet.json` и доступа к блокчейну.
+No `wallet.json` or live chain access required.
 
-## Перед `git push`
+## Before `git push`
 
-- [ ] Нет файла `wallet.json` в репозитории
-- [ ] Нет `chain/clients/ledger_clients.py` и `chain/wallets/wallets_list.py` в коммите
-- [ ] В коде и коммитах нет мнемоники (только `wallet.example.json` с заглушками)
-- [ ] `../source/` не добавлен в git
-
-## Скриншоты
-
-Каталог `screen/` — примеры интерфейса.
+- [ ] No `wallet.json` in the repository
+- [ ] No generated `ledger_clients.py` or `wallets_list.py` in commits
+- [ ] No real mnemonic in code (only placeholders in `wallet.example.json`)
+- [ ] `../source/` is not tracked by git
