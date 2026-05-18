@@ -1,9 +1,30 @@
-import os
 import json
-import requests
+import os
 import signal
 import time
+
+import requests
 from tabulate import tabulate
+
+
+def fetch_osmosis_token_rows(api_url, display_values):
+    response = requests.get(api_url, timeout=30)
+    response.raise_for_status()
+    data = json.loads(response.text)
+    data = sorted(data, key=lambda x: float(x.get('price_7d_change', 0)), reverse=True)
+    rows = []
+    for item in data:
+        if item.get('display') not in display_values:
+            continue
+        rows.append({
+            'symbol': item.get('symbol', ''),
+            'price': item.get('price', ''),
+            'liquidity': item.get('liquidity', ''),
+            'volume_24h': item.get('volume_24h', ''),
+            'price_24h_change': item.get('price_24h_change', ''),
+            'price_7d_change': item.get('price_7d_change', ''),
+        })
+    return rows
 
 
 def filter_data_by_display(api_url, display_values, group1_color, group2_color, update_interval):

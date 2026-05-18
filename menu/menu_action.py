@@ -1,7 +1,3 @@
-import json
-import os
-from collections import defaultdict
-
 from colorama import init
 
 from action_crypto.bank.check_all_balances import check_balances_addresses_book
@@ -10,31 +6,16 @@ from action_crypto.info.tokens_info import filter_data_by_display
 from action_crypto.tx.transfer.transfer_ibc import transfer_ibc
 from config.config_links import LinksAPIChain
 from config.config_list import ListData
-from config.config_path import ConfigPath
 from config.config_path_files import PathFileName
 from menu.menu_runner import run_menu
 from menu.menu_setting import clear_menu
 from project_utils.chain_resources import get_network_client, get_wallet, load_ledger_clients_module, load_wallets_module
+from project_utils.ibc_routes import load_ibc_routes, routes_by_source
 
 init(autoreset=True)
 path_filename = PathFileName()
 links_api_chain = LinksAPIChain()
 data_list = ListData()
-
-_IBC_ROUTES_PATH = os.path.join(ConfigPath.root_config_path, 'ibc_routes.json')
-
-
-def _load_ibc_routes():
-    with open(_IBC_ROUTES_PATH, 'r', encoding='utf-8') as f:
-        payload = json.load(f)
-    return payload['routes']
-
-
-def _routes_by_source(routes):
-    grouped = defaultdict(list)
-    for route in routes:
-        grouped[route['source_network']].append(route)
-    return dict(sorted(grouped.items()))
 
 
 def _execute_ibc_route(route):
@@ -80,8 +61,8 @@ def _menu_transfer_destinations(source_network, routes):
 
 
 def menu_transfer_ibc():
-    routes = _load_ibc_routes()
-    by_source = _routes_by_source(routes)
+    routes = load_ibc_routes()
+    by_source = routes_by_source(routes)
 
     while True:
         items = []

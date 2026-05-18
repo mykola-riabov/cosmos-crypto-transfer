@@ -13,7 +13,7 @@ def to_python_identifier(chain_name: str) -> str:
 
 
 def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosmos, root_client_path,
-                                 filename_ledger_client):
+                                 filename_ledger_client, link_type=None):
     # check if cosmos_data_list.json exists
     print(filename_by_path_cosmos)
     if not os.path.exists(data_path):
@@ -22,7 +22,10 @@ def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosm
     if not os.path.exists(os.path.join(data_path, filename_cosmos)):
         print('Error: cosmos_data_list.json file not found')
         return
-    selected_link_type = input("Select link type (rest_link or keplr_rest_link): ").strip()
+    if link_type:
+        selected_link_type = link_type.strip()
+    else:
+        selected_link_type = input("Select link type (rest_link or keplr_rest_link): ").strip()
 
     with open(os.path.join(data_path, filename_cosmos)) as f:
         data = json.load(f)

@@ -1,5 +1,8 @@
 .idea/
 .vscode/
+
+# Локальная песочница (копия проекта с GUI, не в GitHub)
+example/
 *.swp
 *.swo
 *~

@@ -67,11 +67,47 @@ python -m unittest discover -s tests -v   # no mnemonic required
 
 ## First run
 
+**CLI:**
+
 ```bash
 python menu_crypto.py
 ```
 
-Recommended flow under **“3. Check and create data”**:
+**GUI** (tkinter, Linux desktop):
+
+```bash
+# Debian/Ubuntu if tkinter is missing:
+# sudo apt install python3-tk
+
+python gui_crypto.py
+```
+
+The GUI provides the same flows as the CLI: setup, IBC transfer (with preview and confirmation), balances, address book, and Osmosis token prices.
+
+| GUI tab | Purpose |
+|---------|---------|
+| Home | Status of `wallet.json`, generated clients, address book |
+| IBC Transfer | Pick route from `ibc_routes.json`, preview, confirm amount, send |
+| Balances | Query all balances from the address book |
+| Address book | Browse / filter saved addresses |
+| Osmosis tokens | Token prices from Osmosis DEX API |
+| Setup | Same steps as CLI “Check and create data” |
+
+Quick start (no venv):
+
+```bash
+pip3 install -r requirements.txt
+python3 gui_crypto.py
+# or: ./run_gui.sh
+```
+
+IBC transfers in the GUI use `prepare_ibc_transfer` / `broadcast_ibc_transfer` (no terminal prompts). CLI behaviour is unchanged.
+
+### Local sandbox (`example/`)
+
+The `example/` directory is **gitignored**. You can keep a working copy there (e.g. `example/cosmos-crypto-transfer/`) for experiments without affecting what is pushed to GitHub. Clone or copy the repo into `example/`, then run `python3 gui_crypto.py` from that copy; `../source` is still shared with the main tree.
+
+Recommended flow under **“3. Check and create data”** (CLI) or the **Setup** tab (GUI):
 
 | Step | Menu item | Action |
 |------|-----------|--------|
@@ -112,6 +148,8 @@ See `.env.example`:
 ```
 cosmos-crypto-transfer/
 ├── menu_crypto.py
+├── gui_crypto.py           # GUI entry point
+├── gui/
 ├── menu/
 ├── action_crypto/          # balances, IBC, Osmosis DEX info
 ├── config/
@@ -144,7 +182,7 @@ All routes are defined in `config/ibc_routes.json`. Example:
 }
 ```
 
-To transfer: menu **1 → 4**, pick source chain and route, then symbol and amount from `denoms_book.json`.
+To transfer: CLI menu **1 → 4**, or GUI **IBC Transfer** tab; pick source chain and route, then symbol and amount from `denoms_book.json`.
 
 ## Tests
 
