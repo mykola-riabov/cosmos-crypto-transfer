@@ -1,6 +1,10 @@
 # cosmos-crypto-transfer
 
-CLI for **IBC token transfers** across Cosmos chains, balance checks, and address book management. Uses a **time-based timeout** (default 120 seconds) instead of a block-height timeout, which is often better for arbitrage than typical wallets.
+Cosmos wallet toolkit: **IBC transfers**, balances, address book, and token catalog. Available as a **desktop GUI** (tkinter) or **CLI** (`menu_crypto.py` / `cosmos_cli.py`).
+
+IBC transfers use a **time-based timeout** (default 120 seconds) instead of a block-height timeout, which is often better for arbitrage than typical wallets.
+
+**Credentials:** mnemonic lives only in a **KeePass vault** under `~/.market_ai_secrets/` (not in the repo). Local setup artifacts go under `source/` (gitignored).
 
 ## Screenshots
 
@@ -70,10 +74,24 @@ python -m unittest discover -s tests -v   # no mnemonic required
 
 ## First run
 
-**CLI:**
+1. Install dependencies (see [Install](#install)).
+2. Create the **secret vault** (GUI: Setup → Secret vault, or `python secrets_cli.py init`).
+3. Run **Setup** (GUI tab or CLI menu “Check and create data”) to build `source/data/` and generated chain files.
+
+**Interactive text menu (full setup + actions):**
 
 ```bash
 python menu_crypto.py
+```
+
+**Headless CLI** (SSH, scripts; no tkinter):
+
+```bash
+./run_cli.sh status
+./run_cli.sh setup pipeline
+./run_cli.sh balances
+./run_cli.sh transfer preview -s osmosis -d cosmoshub --symbol osmo --amount 0.01
+# same as: python cosmos_cli.py …
 ```
 
 **GUI** (tkinter, Linux desktop):
@@ -82,30 +100,36 @@ python menu_crypto.py
 # Debian/Ubuntu if tkinter is missing:
 # sudo apt install python3-tk
 
-python gui_crypto.py
+./run_gui.sh
+# or: python gui_crypto.py
 ```
 
-The GUI provides the same flows as the CLI: setup, IBC transfer (with preview and confirmation), balances, address book, and Osmosis token prices.
-
-| GUI tab | Purpose |
-|---------|---------|
-| Home | Status of secret vault, generated clients, address book |
-| IBC Transfer | Pick route from `ibc_routes.json`, preview, confirm amount, send |
-| Balances | Query all balances from the address book |
-| Address book | Browse / filter saved addresses |
-| Osmosis tokens | Token prices from Osmosis DEX API |
-| Setup | Same steps as CLI “Check and create data”; **Run first-time setup** runs the full pipeline |
-| Settings | **Dark** theme by default; switch to Light; saved in `gui_settings.json` |
-
-Quick start (no venv):
+Quick start without venv:
 
 ```bash
 pip3 install -r requirements.txt
 python3 gui_crypto.py
-# or: ./run_gui.sh
 ```
 
-IBC transfers in the GUI use `prepare_ibc_transfer` / `broadcast_ibc_transfer` (no terminal prompts). CLI behaviour is unchanged.
+| GUI tab | Purpose |
+|---------|---------|
+| Portfolio | Wallet overview; **Name token…** for unknown IBC denoms |
+| Send | IBC transfer (routes, preview, time/block timeout, gas) |
+| Receive | Deposit addresses per enabled network |
+| History | Transfer attempt log |
+| Assets | Per-network balance details |
+| Networks | Enable/disable chains, REST health |
+| Tokens | chain-registry asset list (+ Osmosis prices when available) |
+| Denoms | Edit `addresses/denoms/denoms_book.json` (symbol ↔ on-chain denom) |
+| Market | Osmosis DEX token prices |
+| Address book | Derived addresses (from vault mnemonic) |
+| Setup | Same steps as CLI “Check and create data”; **Run first-time setup** |
+| Settings | Theme (dark/light); prefs in `source/data/gui_settings.json` |
+| Status | Vault, generated clients, address book readiness |
+
+**Token symbols** for Send/Portfolio come from `addresses/denoms/denoms_book.json` (plus registry/Keplr data loaded into the catalog). Manual names and auto-resolved IBC denoms are stored in that file.
+
+GUI IBC sends use `prepare_ibc_transfer` / `broadcast_ibc_transfer` (no terminal prompts).
 
 Recommended flow under **“3. Check and create data”** (CLI) or the **Setup** tab (GUI):
 
@@ -151,21 +175,29 @@ See `.env.example`:
 
 ```
 cosmos-crypto-transfer/
-├── menu_crypto.py
-├── gui_crypto.py           # GUI entry point
+├── menu_crypto.py          # interactive text menu
+├── cosmos_cli.py           # headless CLI entry
+├── gui_crypto.py           # GUI entry
+├── secrets_cli.py          # KeePass vault (init / set mnemonic)
+├── run_gui.sh / run_cli.sh
 ├── gui/
+├── cli/
 ├── menu/
 ├── action_crypto/          # balances, IBC, Osmosis DEX info
 ├── config/
-│   └── ibc_routes.json     # IBC routes (editable)
-├── addresses/              # denoms_book, pools_book
+│   └── ibc_routes.json     # IBC routes (editable, in git)
+├── addresses/
+│   └── denoms/denoms_book.json   # token map (in git; edit via Denoms tab)
 ├── chain/
-│   ├── clients/            # ledger_clients.py — generated
-│   └── wallets/            # wallets_list.py — generated
+│   ├── clients/            # ledger_clients.py — generated, gitignored
+│   └── wallets/            # wallets_list.py — generated, gitignored
+├── source/                 # local only (.gitignore): data/, chain-registry/, …
 ├── project_utils/
 ├── screen/                 # UI screenshots
 └── tests/
 ```
+
+**Not pushed to GitHub:** everything under `source/`, generated `ledger_clients.py` / `wallets_list.py`, vault files in `~/.market_ai_secrets/`, `gui_settings.json`, any `wallet.json` if present.
 
 ## IBC routes
 
@@ -185,7 +217,7 @@ All routes are defined in `config/ibc_routes.json`. Example:
 }
 ```
 
-To transfer: CLI menu **1 → 4**, or GUI **IBC Transfer** tab; pick source chain and route, then symbol and amount from `denoms_book.json`.
+To transfer: CLI menu **1 → 4**, or GUI **Send** tab; pick source/destination networks and route, then token and amount (symbols from `denoms_book.json`).
 
 ## Tests
 
