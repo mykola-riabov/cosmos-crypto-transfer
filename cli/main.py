@@ -332,7 +332,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_tok.add_argument('--no-prices', action='store_true')
     p_tok.set_defaults(func=_cmd_tokens)
 
-    p_menu = sub.add_parser('menu', help='Interactive text menu (legacy)')
+    p_menu = sub.add_parser('menu', help='Interactive text menu (setup, balances, IBC)')
     p_menu.set_defaults(func=_cmd_menu)
 
     p_sec = sub.add_parser('secrets', help='KeePass vault (init, unlock, status, …)')

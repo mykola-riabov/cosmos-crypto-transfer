@@ -33,6 +33,7 @@ NAV_LABELS = (
     '—',
     'Networks',
     'Tokens',
+    'Denoms',
     'Market',
     '—',
     'Address book',
@@ -76,6 +77,7 @@ class CosmosGuiApp(tk.Tk):
         self._build_balances_tab()
         self._build_networks_tab()
         self._build_tokens_tab()
+        self._build_denoms_tab()
         self._build_addresses_tab()
         self._build_osmosis_tab()
         self._build_setup_tab()
@@ -136,6 +138,7 @@ class CosmosGuiApp(tk.Tk):
         self.tab_balances = ttk.Frame(self._page_stack, padding=12)
         self.tab_networks = ttk.Frame(self._page_stack, padding=12)
         self.tab_tokens = ttk.Frame(self._page_stack, padding=12)
+        self.tab_denoms = ttk.Frame(self._page_stack, padding=12)
         self.tab_addresses = ttk.Frame(self._page_stack, padding=12)
         self.tab_osmosis = ttk.Frame(self._page_stack, padding=12)
         self.tab_setup = ttk.Frame(self._page_stack, padding=12)
@@ -150,6 +153,7 @@ class CosmosGuiApp(tk.Tk):
             'Assets': self.tab_balances,
             'Networks': self.tab_networks,
             'Tokens': self.tab_tokens,
+            'Denoms': self.tab_denoms,
             'Market': self.tab_osmosis,
             'Address book': self.tab_addresses,
             'Setup': self.tab_setup,
@@ -206,6 +210,8 @@ class CosmosGuiApp(tk.Tk):
             self._refresh_networks_table()
         elif label == 'Tokens':
             self._refresh_tokens_chain_filter()
+        elif label == 'Denoms':
+            self._refresh_denoms_table()
         elif label == 'Address book':
             self._load_addresses()
 
@@ -677,16 +683,9 @@ class CosmosGuiApp(tk.Tk):
         decimals_var = tk.StringVar(value='6')
         ttk.Entry(dialog, textvariable=decimals_var, width=8).pack(padx=12, pady=(0, 8), anchor=tk.W)
 
-        also_book = tk.BooleanVar(value=True)
-        ttk.Checkbutton(
-            dialog,
-            text='Also append to denoms_book.json (same format as Osmosis mappings)',
-            variable=also_book,
-        ).pack(anchor=tk.W, padx=12, pady=(0, 8))
-
         self._muted_label(
             dialog,
-            text='Saved to source/data/user_token_mappings.json and used for Send / Portfolio.',
+            text='Saved to addresses/denoms/denoms_book.json (edit all mappings on Denoms tab).',
             wraplength=480,
             track=False,
         ).pack(anchor=tk.W, padx=12, pady=(0, 8))
@@ -710,7 +709,6 @@ class CosmosGuiApp(tk.Tk):
                     denom_var.get().strip(),
                     sym,
                     decimals=dec,
-                    also_denoms_book=bool(also_book.get()),
                 )
             except Exception as exc:
                 messagebox.showerror('Name token', str(exc), parent=dialog)
@@ -1836,6 +1834,173 @@ class CosmosGuiApp(tk.Tk):
             self.log('Tokens loaded: ' + ' · '.join(parts))
 
         self._run_async('Registry tokens', worker, on_success=on_success)
+
+    def _build_denoms_tab(self):
+        from config.config_path_files import PathFileName
+
+        book_path = PathFileName().denoms_book_path
+        ttk.Label(
+            self.tab_denoms,
+            text='Token map (denoms_book.json)',
+            font=('', 11, 'bold'),
+        ).pack(anchor=tk.W, pady=(0, 4))
+        self._muted_label(
+            self.tab_denoms,
+            text=(
+                f'All symbol ↔ on-chain denom mappings live in one file:\n{book_path}\n'
+                'Manual names from Portfolio and auto IBC resolves are saved here too.'
+            ),
+            wraplength=920,
+        ).pack(anchor=tk.W, pady=(0, 8))
+
+        toolbar = ttk.Frame(self.tab_denoms)
+        toolbar.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(toolbar, text='Network').pack(side=tk.LEFT, padx=(0, 6))
+        self.var_denoms_network = tk.StringVar(value='All')
+        self.cmb_denoms_network = ttk.Combobox(
+            toolbar,
+            textvariable=self.var_denoms_network,
+            state='readonly',
+            width=22,
+        )
+        self.cmb_denoms_network.pack(side=tk.LEFT, padx=(0, 10))
+        self.cmb_denoms_network.bind('<<ComboboxSelected>>', lambda _e: self._refresh_denoms_table())
+        ttk.Button(toolbar, text='Add…', command=self._denoms_add_dialog).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text='Edit…', command=self._denoms_edit_dialog).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text='Delete', command=self._denoms_delete_selected).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text='Reload', command=self._refresh_denoms_table).pack(side=tk.LEFT, padx=4)
+
+        cols = ('network', 'symbol', 'denom', 'decimal')
+        self.denoms_tree = ttk.Treeview(self.tab_denoms, columns=cols, show='headings', height=20)
+        for col, title, width in [
+            ('network', 'Network', 120),
+            ('symbol', 'Symbol', 80),
+            ('denom', 'Denom / contract', 360),
+            ('decimal', 'Decimals', 72),
+        ]:
+            self.denoms_tree.heading(col, text=title)
+            self.denoms_tree.column(col, width=width, stretch=col == 'denom')
+        scroll = ttk.Scrollbar(self.tab_denoms, orient=tk.VERTICAL, command=self.denoms_tree.yview)
+        self.denoms_tree.configure(yscrollcommand=scroll.set)
+        self.denoms_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
+
+        self.lbl_denoms_status = self._muted_label(self.tab_denoms, text='')
+        self.lbl_denoms_status.pack(anchor=tk.W)
+        self._denoms_row_by_iid: dict = {}
+        self._refresh_denoms_network_filter()
+
+    def _refresh_denoms_network_filter(self):
+        nets = sorted({n for n in services.get_wallet_networks() if n}, key=str.lower)
+        values = ['All'] + nets
+        self.cmb_denoms_network['values'] = values
+        if self.var_denoms_network.get() not in values:
+            self.var_denoms_network.set('All')
+
+    def _refresh_denoms_table(self):
+        if not hasattr(self, 'denoms_tree'):
+            return
+        self._refresh_denoms_network_filter()
+        network = self.var_denoms_network.get()
+        entries = services.list_denoms_book_entries(None if network == 'All' else network)
+        self._denoms_row_by_iid.clear()
+        for item in self.denoms_tree.get_children():
+            self.denoms_tree.delete(item)
+        for entry in entries:
+            net = entry.get('network', '')
+            sym = entry.get('symbol', '')
+            denom = entry.get('denom_contract', '')
+            dec = entry.get('decimal', '6')
+            iid = self.denoms_tree.insert(
+                '',
+                tk.END,
+                values=(net, sym, denom, dec),
+            )
+            self._denoms_row_by_iid[iid] = entry
+        self.lbl_denoms_status.configure(text=f'{len(entries)} mapping(s)')
+
+    def _denoms_selected_entry(self):
+        sel = self.denoms_tree.selection()
+        if not sel:
+            return None
+        return self._denoms_row_by_iid.get(sel[0])
+
+    def _denoms_entry_dialog(self, title: str, entry: Optional[dict] = None):
+        dialog = tk.Toplevel(self)
+        dialog.title(title)
+        dialog.transient(self)
+        dialog.grab_set()
+
+        net_var = tk.StringVar(value=(entry or {}).get('network', ''))
+        sym_var = tk.StringVar(value=(entry or {}).get('symbol', ''))
+        denom_var = tk.StringVar(value=(entry or {}).get('denom_contract', ''))
+        dec_var = tk.StringVar(value=str((entry or {}).get('decimal', '6')))
+
+        ttk.Label(dialog, text='Network').grid(row=0, column=0, sticky=tk.W, padx=12, pady=6)
+        ttk.Entry(dialog, textvariable=net_var, width=28).grid(row=0, column=1, padx=12, pady=6)
+        ttk.Label(dialog, text='Symbol').grid(row=1, column=0, sticky=tk.W, padx=12, pady=6)
+        ttk.Entry(dialog, textvariable=sym_var, width=28).grid(row=1, column=1, padx=12, pady=6)
+        ttk.Label(dialog, text='Denom / contract').grid(row=2, column=0, sticky=tk.W, padx=12, pady=6)
+        ttk.Entry(dialog, textvariable=denom_var, width=48).grid(row=2, column=1, padx=12, pady=6)
+        ttk.Label(dialog, text='Decimals').grid(row=3, column=0, sticky=tk.W, padx=12, pady=6)
+        ttk.Entry(dialog, textvariable=dec_var, width=8).grid(row=3, column=1, sticky=tk.W, padx=12, pady=6)
+
+        def save():
+            try:
+                dec = int(dec_var.get().strip())
+            except ValueError:
+                messagebox.showerror(title, 'Decimals must be a whole number.', parent=dialog)
+                return
+            if dec < 0 or dec > 18:
+                messagebox.showerror(title, 'Decimals must be between 0 and 18.', parent=dialog)
+                return
+            try:
+                services.upsert_denoms_book_entry(
+                    net_var.get().strip(),
+                    sym_var.get().strip(),
+                    denom_var.get().strip(),
+                    dec,
+                )
+            except Exception as exc:
+                messagebox.showerror(title, str(exc), parent=dialog)
+                return
+            dialog.destroy()
+            self._refresh_denoms_table()
+            self.log(f'Denoms book: {sym_var.get().strip()} on {net_var.get().strip()}')
+
+        btn_row = ttk.Frame(dialog)
+        btn_row.grid(row=4, column=0, columnspan=2, pady=12)
+        ttk.Button(btn_row, text='Save', command=save).pack(side=tk.LEFT, padx=6)
+        ttk.Button(btn_row, text='Cancel', command=dialog.destroy).pack(side=tk.LEFT, padx=6)
+
+    def _denoms_add_dialog(self):
+        self._denoms_entry_dialog('Add token mapping')
+
+    def _denoms_edit_dialog(self):
+        entry = self._denoms_selected_entry()
+        if not entry:
+            messagebox.showinfo('Denoms', 'Select a row to edit.', parent=self)
+            return
+        self._denoms_entry_dialog('Edit token mapping', entry)
+
+    def _denoms_delete_selected(self):
+        entry = self._denoms_selected_entry()
+        if not entry:
+            messagebox.showinfo('Denoms', 'Select a row to delete.', parent=self)
+            return
+        sym = entry.get('symbol', '')
+        net = entry.get('network', '')
+        if not messagebox.askyesno(
+            'Denoms',
+            f'Delete mapping {sym} on {net}?',
+            parent=self,
+        ):
+            return
+        if services.delete_denoms_book_entry(net, entry.get('denom_contract', '')):
+            self._refresh_denoms_table()
+            self.log(f'Deleted denoms mapping: {sym} on {net}')
+        else:
+            messagebox.showerror('Denoms', 'Could not delete entry.', parent=self)
 
     def _build_addresses_tab(self):
         ttk.Label(

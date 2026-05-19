@@ -2,8 +2,6 @@
 .vscode/
 
 # Local sandbox copy (not pushed to GitHub)
-example/
-
 # GUI preferences (theme)
 **/gui_settings.json
 *.swp

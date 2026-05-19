@@ -243,6 +243,11 @@ def _balance_token_choices(network: str, catalog, rest: Optional[str]) -> List[d
         )
 
     rows, _missed = fetch_balances(networks={network})
+    if not rows:
+        from project_utils.denoms_book import entries_for_network
+
+        for item in entries_for_network(network):
+            _add(item.get('symbol', ''), item.get('denom_contract', ''))
     for row in rows:
         if row.error or not row.denom or row.denom == '(empty)':
             continue
@@ -261,22 +266,43 @@ def add_user_token_mapping(
     denom: str,
     symbol: str,
     decimals: int = 6,
-    *,
-    also_denoms_book: bool = True,
 ) -> dict:
-    """Save user label for on-chain denom (any network); updates catalog."""
-    from project_utils.user_token_mappings import save_user_token_mapping
+    """Save user label for on-chain denom into denoms_book.json."""
+    return upsert_denoms_book_entry(network, symbol, denom, decimals)
+
+
+def list_denoms_book_entries(network: Optional[str] = None) -> List[dict]:
+    from project_utils.denoms_book import load_entries
+
+    entries = load_entries()
+    if network and network.strip().lower() not in ('', 'all'):
+        net = network.strip().lower()
+        entries = [e for e in entries if e.get('network', '').lower() == net]
+    return entries
+
+
+def upsert_denoms_book_entry(
+    network: str,
+    symbol: str,
+    denom_contract: str,
+    decimal: int = 6,
+) -> dict:
+    from project_utils.denoms_book import upsert_entry
     from project_utils.token_catalog import invalidate_token_catalog
 
-    entry = save_user_token_mapping(
-        network=network,
-        denom=denom,
-        symbol=symbol,
-        decimals=decimals,
-        also_denoms_book=also_denoms_book,
-    )
+    entry = upsert_entry(network, symbol, denom_contract, decimal)
     invalidate_token_catalog()
     return entry
+
+
+def delete_denoms_book_entry(network: str, denom_contract: str) -> bool:
+    from project_utils.denoms_book import delete_entry
+    from project_utils.token_catalog import invalidate_token_catalog
+
+    ok = delete_entry(network, denom_contract)
+    if ok:
+        invalidate_token_catalog()
+    return ok
 
 
 def chain_rest_urls() -> dict:
@@ -610,6 +636,8 @@ def gui_broadcast_transfer(route, preview, gas_limit: Optional[int] = None) -> s
 
 def fetch_balances(networks: Optional[set] = None):
     paths = get_paths()
+    if not os.path.isfile(paths.ledger_client_mapping) or not os.path.isfile(paths.address_book):
+        return [], []
     if networks is None:
         networks = get_wallet_networks()
     return query_all_balances(

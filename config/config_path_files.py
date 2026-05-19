@@ -17,10 +17,6 @@ class PathFileName:
     report_filepath_keplr_chain = os.path.join(path.create_path, filename.filename_chain_keplr_data_to_create)
     report_filepath_assets = os.path.join(path.create_path, filename.filename_assets_data_to_create)
     data_cosmos_file_name = os.path.join(path.data_path, filename.filename_cosmos_data)
-    wallet_json_filepath = os.path.join(path.creds_path, filename.filename_wallet_json)
-    wallet_json_example_filepath = os.path.join(
-        path.root_config_path, filename.filename_wallet_json_example
-    )
     google_api_key = os.path.join(path.creds_path, filename.filename_google_api)
     wallets_list_path = os.path.join(path.root_wallet_path, filename.filename_wallets_list)
     address_book_temp = os.path.join(path.create_path, filename.filename_temp_address_book)
@@ -36,8 +32,6 @@ class PathFileName:
     pools_book_path = os.path.join(path.root_pools_path, filename.filename_pools_book)
     transaction_log = os.path.join(path.logs_path, filename.filename_transaction_log)
     tx_history = os.path.join(path.data_path, filename.filename_tx_history)
-    resolved_ibc_denoms = os.path.join(path.data_path, filename.filename_resolved_ibc_denoms)
-    user_token_mappings = os.path.join(path.data_path, filename.filename_user_token_mappings)
     status_signal_path = os.path.join(path.data_path, filename.file_name_status_signal)
     last_period_path = os.path.join(path.data_path, filename.file_name_last_period)
     status_signal_log_path = os.path.join(path.data_path, filename.file_name_log_signal)

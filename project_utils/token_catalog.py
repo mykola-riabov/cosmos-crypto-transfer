@@ -39,15 +39,16 @@ class TokenCatalog:
         self._by_network_symbol.clear()
         paths = PathFileName()
 
-        if os.path.isfile(paths.denoms_book_path):
-            for (symbol, network), item in load_denoms_index(paths.denoms_book_path).items():
-                self._register(
-                    network,
-                    item.get('denom_contract', ''),
-                    symbol=item.get('symbol') or symbol,
-                    decimals=item.get('decimal'),
-                    source='denoms_book',
-                )
+        from project_utils.denoms_book import load_entries
+
+        for item in load_entries(paths.denoms_book_path):
+            self._register(
+                item.get('network', ''),
+                item.get('denom_contract', ''),
+                symbol=item.get('symbol'),
+                decimals=item.get('decimal'),
+                source='denoms_book',
+            )
 
         for token in load_registry_tokens():
             self._register(
@@ -86,41 +87,7 @@ class TokenCatalog:
                         source='chain_fee',
                     )
 
-        for item in self._load_persisted_ibc_denoms():
-            self._register(
-                item.get('network', ''),
-                item.get('ibc_denom', ''),
-                symbol=item.get('symbol'),
-                decimals=item.get('decimals'),
-                source='ibc_persisted',
-            )
-
-        for item in self._load_user_token_mappings():
-            self._register(
-                item.get('network', ''),
-                item.get('denom_contract', ''),
-                symbol=item.get('symbol'),
-                decimals=item.get('decimal'),
-                source='user',
-            )
-
         self._loaded = True
-
-    def _load_persisted_ibc_denoms(self) -> List[dict]:
-        try:
-            from project_utils.ibc_denom_store import load_resolved_ibc_denoms
-
-            return load_resolved_ibc_denoms()
-        except Exception:
-            return []
-
-    def _load_user_token_mappings(self) -> List[dict]:
-        try:
-            from project_utils.user_token_mappings import load_user_token_mappings
-
-            return load_user_token_mappings()
-        except Exception:
-            return []
 
     def _register(
         self,
@@ -237,16 +204,23 @@ class TokenCatalog:
             coingecko_id=coingecko_id,
             source='ibc_trace',
         )
-        if persist:
-            from project_utils.ibc_denom_store import save_resolved_ibc_entry
+        if persist and symbol:
+            from project_utils.denoms_book import upsert_entry
 
-            save_resolved_ibc_entry(
-                network=network,
-                ibc_denom=ibc_denom,
-                symbol=str(symbol or ''),
-                decimals=int(decimals or 6),
-                origin_denom=origin_denom,
-                origin_network=origin_network or '',
+            upsert_entry(
+                network,
+                str(symbol),
+                ibc_denom,
+                int(decimals or 6),
+            )
+            self._register(
+                network,
+                ibc_denom,
+                symbol=symbol,
+                decimals=decimals,
+                display=display,
+                coingecko_id=coingecko_id,
+                source='denoms_book',
             )
         return True
 

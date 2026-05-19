@@ -89,7 +89,7 @@ The GUI provides the same flows as the CLI: setup, IBC transfer (with preview an
 
 | GUI tab | Purpose |
 |---------|---------|
-| Home | Status of `wallet.json`, generated clients, address book |
+| Home | Status of secret vault, generated clients, address book |
 | IBC Transfer | Pick route from `ibc_routes.json`, preview, confirm amount, send |
 | Balances | Query all balances from the address book |
 | Address book | Browse / filter saved addresses |
@@ -106,10 +106,6 @@ python3 gui_crypto.py
 ```
 
 IBC transfers in the GUI use `prepare_ibc_transfer` / `broadcast_ibc_transfer` (no terminal prompts). CLI behaviour is unchanged.
-
-### Local sandbox (`example/`)
-
-The `example/` directory is **gitignored**. You can keep a working copy there (e.g. `example/cosmos-crypto-transfer/`) for experiments without affecting what is pushed to GitHub. Clone or copy the repo into `example/`, then run `python3 gui_crypto.py` from that copy; `../source` is still shared with the main tree.
 
 Recommended flow under **“3. Check and create data”** (CLI) or the **Setup** tab (GUI):
 
@@ -139,8 +135,6 @@ python secrets_cli.py set           # change mnemonic
 
 Files are created under `~/.market_ai_secrets/cosmos-crypto-transfer/`.
 
-Legacy mode: plaintext `source/creds/wallet.json` still works if no vault exists (not recommended).
-
 For chains with a non-default HD path (e.g. **Agoric**, slip44 `564`), add `"slip44": 564` to that chain’s entry in `cosmos_data_list.json` before step 8.
 
 ## Environment variables
@@ -150,8 +144,8 @@ See `.env.example`:
 | Variable | Default |
 |----------|---------|
 | `COSMOS_PROJECT_ROOT` | directory containing `menu_crypto.py` |
-| `COSMOS_SOURCE_PATH` | `../source` |
-| `COSMOS_WALLET_FILE` | `source/creds/wallet.json` |
+| `COSMOS_SOURCE_PATH` | `<project>/source` |
+| `MARKET_AI_SECRETS_SLUG` | `cosmos-crypto-transfer` |
 
 ## Project layout
 
@@ -163,8 +157,7 @@ cosmos-crypto-transfer/
 ├── menu/
 ├── action_crypto/          # balances, IBC, Osmosis DEX info
 ├── config/
-│   ├── ibc_routes.json     # IBC routes (editable)
-│   └── wallet.example.json # creds template (placeholders only)
+│   └── ibc_routes.json     # IBC routes (editable)
 ├── addresses/              # denoms_book, pools_book
 ├── chain/
 │   ├── clients/            # ledger_clients.py — generated

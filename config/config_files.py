@@ -34,10 +34,7 @@ class FileName:
     filename_grpc_link_to_create = 'grpc_links_report.json'
     project_file_ledger_client = 'ledger_clients.py'
 # ======================================================================================================================
-    filename_wallet_json = 'wallet.json'
-    filename_wallet_json_example = 'wallet.example.json'
     filename_google_api = 'gacc.json'
-    mnemonic_wallet_key = 'mnemonic' + SuffixFileName.suffix_wallet_1
 # ======================================================================================================================
     filename_dict_chain_id = 'list_chain_id.json'
     filename_wallets_list = 'wallets_list.py'
@@ -54,8 +51,6 @@ class FileName:
     filename_pools_book = 'pools_book.json'
     filename_transaction_log = 'transactions.log'
     filename_tx_history = 'tx_history.json'
-    filename_resolved_ibc_denoms = 'resolved_ibc_denoms.json'
-    filename_user_token_mappings = 'user_token_mappings.json'
     file_name_status_signal = 'signal_status.json'
     file_name_last_period = 'last_period.json'
     file_name_log_signal = 'log_signal.log'
