@@ -13,7 +13,7 @@ def to_python_identifier(chain_name: str) -> str:
 
 
 def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosmos, root_client_path,
-                                 filename_ledger_client, link_type=None):
+                                 filename_ledger_client, link_type=None, enabled_networks=None):
     # check if cosmos_data_list.json exists
     print(filename_by_path_cosmos)
     if not os.path.exists(data_path):
@@ -38,8 +38,11 @@ def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosm
 
         num_clients = 0
         chain_names = []
+        enabled_set = set(enabled_networks) if enabled_networks is not None else None
         for chain in data:
             network_name = chain['chain_name']
+            if enabled_set is not None and network_name not in enabled_set:
+                continue
             chain_name = to_python_identifier(network_name)
             url = None
             link = chain.get(selected_link_type)
@@ -76,7 +79,7 @@ def create_ledger_clients_file(filename_by_path_cosmos, data_path, filename_cosm
     print(Fore.GREEN + f'{num_clients} ledger clients generated for chains:' + Style.RESET_ALL)
 
 
-def create_ledger_client_mapping(input_file, output_file):
+def create_ledger_client_mapping(input_file, output_file, enabled_networks=None):
     # Check if input file exists
     if not os.path.isfile(input_file):
         print(f"Error: Input file '{input_file}' does not exist.")
@@ -95,8 +98,11 @@ def create_ledger_client_mapping(input_file, output_file):
     with open(input_file, 'r') as f:
         data = json.load(f)
     network_client_mapping = []
+    enabled_set = set(enabled_networks) if enabled_networks is not None else None
     for chain in data:
         network_name = chain['chain_name']
+        if enabled_set is not None and network_name not in enabled_set:
+            continue
         python_name = to_python_identifier(network_name)
         network_client_mapping.append({
             'network': network_name,

@@ -16,7 +16,8 @@ class ListData:
     ]
     chain_id_list = ['axelar-dojo-1', 'comdex-1', 'cosmoshub-4', 'crescent-1',
                      'evmos_9001-2', 'gravity-bridge-3', 'injective-1', 'irishub-1',
-                     'juno-1', 'kava_2222-10', 'kaiyo-1', 'mars-1', 'osmosis-1', 'secret-4','fetchhub-4']
+                     'juno-1', 'kava_2222-10', 'kaiyo-1', 'mars-1', 'noble-1', 'osmosis-1',
+                     'secret-4', 'fetchhub-4']
     exclude_dir = ['chain-registry',
                    'keplr-chain-registry']
     key1_chain = 'chain_name'

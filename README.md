@@ -26,24 +26,27 @@ IBC transfer:
 
 ## Repository vs local data
 
-Application code lives in this git repository. **Secrets and heavy data stay outside** the repo, in a `source/` directory next to the project (default: `../source` relative to the repo root):
+| Path | Contents |
+|------|----------|
+| `./source/` (inside repo, gitignored) | address book, client mapping, chain-registry clones, logs |
+| `~/.market_ai_secrets/cosmos-crypto-transfer/` | **KeePass vault** — `wallet.kdbx`, `wallet.key`, `master.password` |
 
-| Path (outside repo) | Contents |
-|-------------------|----------|
-| `source/creds/wallet.json` | mnemonic (local only) |
-| `source/data/` | address book, client mapping, cosmos_data_list |
-| `source/chain-registry/` | clone of [chain-registry](https://github.com/cosmos/chain-registry) |
-| `source/temp/` | logs, intermediate JSON |
+The mnemonic is stored **only** in the encrypted KeePass database. Copy `wallet.key` and `master.password` from a USB stick when you trade; delete those two files locally when idle. The database file can stay on disk (it remains encrypted).
 
-This keeps `git push` safe: no seed phrase in the repository.
+Override the secrets folder name with `MARKET_AI_SECRETS_SLUG` (default: `cosmos-crypto-transfer`).
 
 ```
-mygit/
-├── cosmos-crypto-transfer/    ← this repo (code, config, tests)
-└── source/                    ← local only (.gitignore)
-    ├── creds/wallet.json
-    ├── data/
-    └── ...
+cosmos-crypto-transfer/          ← git repo
+├── source/                      ← local data (.gitignore)
+│   ├── data/
+│   └── chain-registry/
+└── ...
+
+~/.market_ai_secrets/
+└── cosmos-crypto-transfer/      ← never in git
+    ├── wallet.kdbx
+    ├── wallet.key
+    └── master.password
 ```
 
 ## Requirements
@@ -91,7 +94,8 @@ The GUI provides the same flows as the CLI: setup, IBC transfer (with preview an
 | Balances | Query all balances from the address book |
 | Address book | Browse / filter saved addresses |
 | Osmosis tokens | Token prices from Osmosis DEX API |
-| Setup | Same steps as CLI “Check and create data” |
+| Setup | Same steps as CLI “Check and create data”; **Run first-time setup** runs the full pipeline |
+| Settings | **Dark** theme by default; switch to Light; saved in `gui_settings.json` |
 
 Quick start (no venv):
 
@@ -120,16 +124,22 @@ Recommended flow under **“3. Check and create data”** (CLI) or the **Setup**
 
 Run **`python menu_crypto.py`** from the repository root; `PYTHONPATH` is set automatically.
 
-## Credentials
+## Secret vault (KeePass)
 
-1. Copy the template:
-   ```bash
-   mkdir -p ../source/creds
-   cp config/wallet.example.json ../source/creds/wallet.json
-   chmod 600 ../source/creds/wallet.json
-   ```
-2. Set your mnemonic in `mnemonic_wallet_1` (or `mnemonic`).
-3. **Never commit** `wallet.json` — it is listed in `.gitignore`.
+**GUI:** Setup → **Create / reset vault** (also offered at the start of first-time setup).
+
+**CLI:**
+
+```bash
+python secrets_cli.py init          # create vault + key file + master.password
+python secrets_cli.py status
+python secrets_cli.py show          # summary only
+python secrets_cli.py set           # change mnemonic
+```
+
+Files are created under `~/.market_ai_secrets/cosmos-crypto-transfer/`.
+
+Legacy mode: plaintext `source/creds/wallet.json` still works if no vault exists (not recommended).
 
 For chains with a non-default HD path (e.g. **Agoric**, slip44 `564`), add `"slip44": 564` to that chain’s entry in `cosmos_data_list.json` before step 8.
 

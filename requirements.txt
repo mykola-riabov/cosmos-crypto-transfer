@@ -6,3 +6,5 @@ bip-utils
 colorama
 tabulate
 requests
+pykeepass>=0.3.2
+sv-ttk>=2.5.0

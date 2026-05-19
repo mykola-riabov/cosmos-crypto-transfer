@@ -15,6 +15,38 @@ class CredentialsError(RuntimeError):
     pass
 
 
+PLACEHOLDER_MNEMONIC = (
+    'word1 word2 word3 word4 word5 word6 word7 word8 word9 word10 word11 word12'
+)
+
+
+def is_placeholder_mnemonic(mnemonic: str) -> bool:
+    return mnemonic.strip() == PLACEHOLDER_MNEMONIC
+
+
+def _mnemonic_from_legacy_wallet() -> Optional[str]:
+    wallet_path = get_wallet_json_path()
+    if not os.path.isfile(wallet_path):
+        return None
+    data = load_wallet_json(wallet_path)
+    mnemonic = (data.get(filename.mnemonic_wallet_key) or data.get('mnemonic') or '').strip()
+    if not mnemonic or is_placeholder_mnemonic(mnemonic):
+        return None
+    return mnemonic
+
+
+def mnemonic_is_configured() -> bool:
+    from chain.wallets.secret_vault import get_status, mnemonic_is_configured as vault_configured
+
+    if get_status().vault_initialized:
+        return vault_configured()
+    return _mnemonic_from_legacy_wallet() is not None
+
+
+def require_configured_mnemonic() -> str:
+    return get_mnemonic()
+
+
 def get_wallet_json_path() -> str:
     return os.environ.get(
         'COSMOS_WALLET_FILE',
@@ -28,7 +60,7 @@ def load_wallet_json(path: Optional[str] = None) -> dict:
         example = path_filename.wallet_json_example_filepath
         raise CredentialsError(
             f'Wallet file not found: {wallet_path}\n'
-            f'Copy {example} to {wallet_path} and set your mnemonic.'
+            f'Use the secret vault (~/.market_ai_secrets/) or copy {example} for legacy mode.'
         )
     with open(wallet_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
@@ -38,29 +70,39 @@ def load_wallet_json(path: Optional[str] = None) -> dict:
 
 
 def get_mnemonic(wallet_key: Optional[str] = None) -> str:
-    """Return BIP39 mnemonic for the default or named wallet."""
-    data = load_wallet_json()
-    key = wallet_key or filename.mnemonic_wallet_key
+    """Return BIP39 mnemonic from KeePass vault or legacy wallet.json."""
+    from chain.wallets.secret_vault import VaultLockedError, get_status
 
-    mnemonic = data.get(key)
-    if not mnemonic and key != 'mnemonic':
-        mnemonic = data.get('mnemonic')
-    if not mnemonic:
-        raise CredentialsError(
-            f'Mnemonic not found in wallet JSON (expected key {key!r} or "mnemonic").'
-        )
+    status = get_status()
+    if status.vault_initialized:
+        try:
+            from chain.wallets.secret_vault import get_mnemonic as vault_mnemonic
 
-    mnemonic = str(mnemonic).strip()
-    if not mnemonic:
-        raise CredentialsError('Mnemonic is empty.')
-    return mnemonic
+            return vault_mnemonic()
+        except VaultLockedError as exc:
+            raise CredentialsError(str(exc)) from exc
+        except Exception as exc:
+            raise CredentialsError(f'Vault error: {exc}') from exc
+
+    legacy = _mnemonic_from_legacy_wallet()
+    if legacy:
+        return legacy
+
+    raise CredentialsError(
+        'No mnemonic configured.\n'
+        f'Create a vault under {ConfigPath.secrets_path} (GUI: Setup → Secret vault)\n'
+        'or set a mnemonic in source/creds/wallet.json (legacy).'
+    )
 
 
 def get_creds_info() -> dict:
-    """Backward-compatible dict for generated wallets_list.py."""
-    data = load_wallet_json()
-    mnemonic = get_mnemonic()
+    data = {}
+    if os.path.isfile(get_wallet_json_path()):
+        try:
+            data = load_wallet_json()
+        except CredentialsError:
+            pass
     return {
-        filename.mnemonic_wallet_key: mnemonic,
+        filename.mnemonic_wallet_key: get_mnemonic(),
         'api': data.get('api'),
     }

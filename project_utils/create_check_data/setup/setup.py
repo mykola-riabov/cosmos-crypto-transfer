@@ -39,15 +39,15 @@ def source_create_or_check():
     for directory in dirs:
         _ensure_dir(directory)
 
-    from config.config_path_files import PathFileName
-    paths = PathFileName()
-    if not os.path.isfile(paths.wallet_json_filepath) and os.path.isfile(
-        paths.wallet_json_example_filepath
-    ):
-        shutil.copy(paths.wallet_json_example_filepath, paths.wallet_json_filepath)
+    from chain.wallets.secret_vault import ensure_secrets_dir, get_status
+
+    ensure_secrets_dir()
+    vault = get_status()
+    print(Fore.CYAN + f'  Secrets: {vault.secrets_dir}' + Style.RESET_ALL)
+    if not vault.vault_initialized:
         print(
             Fore.YELLOW
-            + f'Created {paths.wallet_json_filepath} from example — edit mnemonic before transfers.'
+            + '  KeePass vault not created yet — use GUI “Secret vault” or: python secrets_cli.py init'
             + Style.RESET_ALL
         )
 

@@ -11,23 +11,34 @@ def _project_root() -> Path:
     ).resolve()
 
 
+def _secrets_slug() -> str:
+    return os.environ.get('MARKET_AI_SECRETS_SLUG', 'cosmos-crypto-transfer')
+
+
+def _secrets_root() -> Path:
+    return Path.home() / '.market_ai_secrets' / _secrets_slug()
+
+
 def _source_root(project_root: Path) -> Path:
     return Path(
         os.environ.get(
             'COSMOS_SOURCE_PATH',
-            project_root.parent / 'source',
+            project_root / 'source',
         )
     ).resolve()
 
 
 _project = _project_root()
 _source = _source_root(_project)
+_secrets = _secrets_root()
 
 
 class ConfigPath:
     project_path = str(_project)
     source_path = str(_source)
-    backup_path = str(_source.parent / 'backup')
+    secrets_slug = _secrets_slug()
+    secrets_path = str(_secrets)
+    backup_path = str(_project / 'backup')
     creds_path = str(_source / 'creds')
     data_path = str(_source / 'data')
     temp_path = str(_source / 'temp')
@@ -47,3 +58,7 @@ class ConfigPath:
     root_pools_path = str(_project / 'addresses' / 'pools')
     data_api_path = str(_source / 'temp' / 'data_api')
     logs_path = str(_source / 'temp' / 'logs')
+    vault_database_path = str(_secrets / 'wallet.kdbx')
+    vault_password_path = str(_secrets / 'master.password')
+    vault_keyfile_path = str(_secrets / 'wallet.key')
+    vault_meta_path = str(_secrets / 'vault.meta.json')

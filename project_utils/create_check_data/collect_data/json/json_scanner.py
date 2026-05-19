@@ -13,12 +13,15 @@ def check_info(input_directory, output_directory, output_file_name, key1, key2):
         file_path = os.path.join(input_directory, filename)
         if os.path.isfile(file_path) and filename.endswith(".json"):
             # If it's a .json file, process it
-            with open(file_path, 'r') as f_in:
-                data = json.load(f_in)
-                chain_name = data.get(key1)
-                chain_id = data.get(key2)
-                if chain_name and chain_id:
-                    result[chain_name] = chain_id
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f_in:
+                    data = json.load(f_in)
+            except json.JSONDecodeError:
+                continue
+            chain_name = data.get(key1)
+            chain_id = data.get(key2)
+            if chain_name and chain_id:
+                result[chain_name] = chain_id
         elif os.path.isdir(file_path):
             # If it's a subdirectory, call the function recursively
             result.update(
@@ -33,26 +36,33 @@ def check_info(input_directory, output_directory, output_file_name, key1, key2):
     return result
 
 
-def chain_should_skip(content, chain_list):
+def chain_should_skip(content, chain_list=None):
     skip_conditions = [
         not content.get('fees'),
         not content.get('$schema', '').endswith('chain.schema.json'),
-        content.get('chain_id', '').lower() not in chain_list,
         'testnet' in content.get('network_type', '').lower(),
         'testnet' in content.get('chain_id', '').lower(),
         'devnet' in content.get('network_type', '').lower(),
         'devnet' in content.get('chain_id', '').lower(),
         'killed' in content.get('status', '').lower(),
-        content.get('chain_id', '').lower().startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9'))
+        content.get('chain_id', '').lower().startswith(('0', '1', '2', '3', '4', '5', '6', '7', '8', '9')),
     ]
+    if chain_list:
+        allowed = {x.replace(' ', '').lower() for x in chain_list}
+        skip_conditions.append(
+            content.get('chain_id', '').replace(' ', '').lower() not in allowed
+        )
     return any(skip_conditions)
 
 
 # ======================================================================================================================
-def keplr_should_skip(content, chain_list):
+def keplr_should_skip(content, chain_list=None):
+    if not chain_list:
+        return 'chainId' not in content
+    allowed = {x.replace(' ', '').lower() for x in chain_list}
     skip_conditions = [
-        'chainId' not in content or content['chainId'].replace(" ", "").lower() not in [
-            x.replace(" ", "").lower() for x in chain_list]
+        'chainId' not in content
+        or content['chainId'].replace(' ', '').lower() not in allowed,
     ]
     return any(skip_conditions)
 
@@ -73,92 +83,94 @@ def check_address(address):
 
 # ======================================================================================================================
 def traverse_directory_chain_data(input_path_dir, input_path_dir2, output_path_filename,
-                                  extract_chain_keys, extract_keplr_chain_keys, chain_list):
+                                  extract_chain_keys, extract_keplr_chain_keys, chain_list,
+                                  verify_rest=True):
     results_chain_data = []
     with open(output_path_filename, 'w') as f_out:
         for root, dirs, files in os.walk(input_path_dir):
             for cosmos_data in files:
-                if cosmos_data.endswith('.json'):
-                    file_path = os.path.join(root, cosmos_data)
-                    # Reading the content of the file
-                    with open(file_path, 'r') as f_in:
+                if cosmos_data != 'chain.json':
+                    continue
+                file_path = os.path.join(root, cosmos_data)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f_in:
                         content = json.load(f_in)
-                    # Extract the necessary data.
-                    if chain_should_skip(content, chain_list):
-                        continue
-                    result = {}
-                    for key in extract_chain_keys:
-                        if key == 'denom':
-                            result[key] = content['fees']['fee_tokens'][0].get('denom')
-                        elif key in content['fees']['fee_tokens'][0]:
-                            result[key] = content['fees']['fee_tokens'][0].get(key)
-                        elif key in content:
-                            result[key] = content.get(key)
-                        else:
-                            result[key] = None
-                    # Adding the 'rest_link' key
-                    apis = content.get('apis', {}).get('rest', [])
+                except json.JSONDecodeError:
+                    continue
+                if chain_should_skip(content, chain_list):
+                    continue
+                result = {}
+                for key in extract_chain_keys:
+                    if key == 'denom':
+                        result[key] = content['fees']['fee_tokens'][0].get('denom')
+                    elif key in content['fees']['fee_tokens'][0]:
+                        result[key] = content['fees']['fee_tokens'][0].get(key)
+                    elif key in content:
+                        result[key] = content.get(key)
+                    else:
+                        result[key] = None
+                apis = content.get('apis', {}).get('rest', [])
+                result['rest_link'] = None
+                if verify_rest:
                     for api in apis:
                         address = api.get('address', '')
                         if check_address(address):
-                            print(f'[{result["chain_id"]}] {address} is working')
+                            print(f'[{result.get("chain_id")}] {address} is working')
                             result['rest_link'] = address
                             break
-                    else:
-                        result['rest_link'] = None
-                    # Removing the 'apis' key from the result
-                    result.pop('apis', None)
-                    # Adding a result
-                    results_chain_data.append(result)
-        # Additional scanning of second directory and appending matching data to results
+                else:
+                    for api in apis:
+                        address = (api.get('address') or '').strip()
+                        if address:
+                            result['rest_link'] = address
+                            break
+                result.pop('apis', None)
+                results_chain_data.append(result)
+
+        keplr_rows = []
         for root, dirs, files in os.walk(input_path_dir2):
             for cosmos_data in files:
-                if cosmos_data.endswith('.json'):
-                    file_path = os.path.join(root, cosmos_data)
-                    try:
-                        # Reading the content of the file
-                        with open(file_path, 'r') as f:
-                            content = json.load(f)
-                        # Extract the necessary data.
-                        if keplr_should_skip(content, chain_list):
-                            continue
-                        result = {}
-                        # Extract data using 'chainId' key
-                        chain_id = content.get('chainId', None)
-                        if chain_id is not None:
-                            # Change the key from 'chainId' to 'chain_id'
-                            result['chain_id'] = chain_id
-                            for key in extract_keplr_chain_keys:
-                                if key == 'chainId':
-                                    continue  # Skip 'chainId' key
-                                elif key == 'rest':
-                                    if 'rest' in content:  # Check if 'rest' key exists in content
-                                        result['keplr_rest_link'] = content['rest']
-                                else:
-                                    if key in content:  # Check if the key exists in content
-                                        result[key] = content.get(key, None)
-                                if key != 'rest' and result.get(key) is None:
-                                    # If the field is missing, skip the file
-                                    continue
-                            # Adding a result
-                            results_chain_data.append(result)
-                    except (json.JSONDecodeError, KeyError) as e:
-                        # Skip files with JSON syntax errors or missing keys
-                        print(f'Error while reading file {file_path}: {e}')
-                        continue
-        # Merging results_chain_data by 'chain_id'
+                if not cosmos_data.endswith('.json'):
+                    continue
+                file_path = os.path.join(root, cosmos_data)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        content = json.load(f)
+                except (json.JSONDecodeError, OSError):
+                    continue
+                if keplr_should_skip(content, chain_list):
+                    continue
+                chain_id = content.get('chainId')
+                if not chain_id:
+                    continue
+                result = {'chain_id': chain_id}
+                if 'rest' in content:
+                    result['keplr_rest_link'] = content['rest']
+                keplr_rows.append(result)
+
+        chain_rows = list(results_chain_data)
+
         merged_results = {}
-        for result in results_chain_data:
-            chain_id = result['chain_id']
-            if chain_id not in merged_results:
-                merged_results[chain_id] = result
-            else:
+        for result in chain_rows:
+            chain_id = result.get('chain_id')
+            if not chain_id:
+                continue
+            merged_results[chain_id] = result
+
+        for result in keplr_rows:
+            chain_id = result.get('chain_id')
+            if not chain_id:
+                continue
+            if chain_id in merged_results:
                 merged_results[chain_id].update(result)
 
-        # Sorting merged results by 'chain_id'
-        merged_results = sorted(merged_results.values(), key=lambda x: x['chain_name'])
+        merged_list = [
+            row for row in merged_results.values()
+            if row.get('chain_name')
+        ]
+        merged_list.sort(key=lambda x: (x.get('chain_name') or '').lower())
 
-        json.dump(merged_results, f_out, indent=4)
+        json.dump(merged_list, f_out, indent=4)
     print(Fore.GREEN + 'Successful completion of scanning and creation Data Chain' + Style.RESET_ALL)
 
 

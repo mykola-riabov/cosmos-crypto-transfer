@@ -67,16 +67,31 @@ def check_and_create_data():
         check_python_modules(data_list.modules_list)
 
     def do_collect_json():
+        import json
+        import os
+
+        from project_utils.create_check_data.collect_data.json.collect_assets import (
+            collect_assets_registry,
+        )
+
         clear_menu(True)
+        chain_id_path = path_filename.list_chain_id
+        if not os.path.isfile(chain_id_path):
+            print(f'Error: run source step first — missing {chain_id_path}')
+            return
+        with open(chain_id_path, 'r', encoding='utf-8') as f:
+            chain_ids = list(json.load(f).values())
         traverse_directory_chain_data(
             path.chain_registry_path,
             path.keplr_chain_registry_path,
             path_filename.result_collection_chain_file_name,
             data_list.keys_to_extract_chain_data,
             data_list.keys_to_extract_chain_keplr_data,
-            data_list.chain_id_list,
+            chain_ids,
+            verify_rest=False,
         )
         init_data_list(path.chain_path, path.data_path, filename.filename_cosmos_data)
+        collect_assets_registry(path.chain_registry_path, path_filename.assets_registry)
 
     def do_ledger_clients():
         clear_menu(True)

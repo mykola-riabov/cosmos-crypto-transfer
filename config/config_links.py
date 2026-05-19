@@ -8,7 +8,7 @@ class LinksAPIChain:
     link_terra_pools = ""
     link_terra_classic_pools = ""
     # ======================================================================================================================
-    link_osmosis_token = "https://api-osmosis.imperator.co/tokens/v2/all"
+    link_osmosis_token = "https://public-osmosis-api.numia.xyz/tokens/v2/all"
     link_crescent_token = "https://mainnet.crescent.network:1317/crescent/liquidity/v1beta1/pairs"
     # ======================================================================================================================
     link_grav_data = 'https://api-osmosis.imperator.co/tokens/v2/historical/GRAV/chart?tf=10080'

@@ -7,23 +7,37 @@ import requests
 from tabulate import tabulate
 
 
-def fetch_osmosis_token_rows(api_url, display_values):
-    response = requests.get(api_url, timeout=30)
+def fetch_osmosis_token_rows(api_url, display_values=None, sort_by='volume_24h', limit=None):
+    response = requests.get(api_url, timeout=45)
     response.raise_for_status()
     data = json.loads(response.text)
-    data = sorted(data, key=lambda x: float(x.get('price_7d_change', 0)), reverse=True)
+    if not isinstance(data, list):
+        raise ValueError('Unexpected Osmosis tokens API response')
+
+    sort_key = {
+        'volume_24h': lambda x: float(x.get('volume_24h') or 0),
+        'liquidity': lambda x: float(x.get('liquidity') or 0),
+        'price_7d_change': lambda x: float(x.get('price_7d_change') or 0),
+    }.get(sort_by, lambda x: float(x.get('volume_24h') or 0))
+    data = sorted(data, key=sort_key, reverse=True)
+
     rows = []
     for item in data:
-        if item.get('display') not in display_values:
+        if display_values is not None and item.get('display') not in display_values:
             continue
         rows.append({
             'symbol': item.get('symbol', ''),
+            'denom': item.get('denom', ''),
+            'display': item.get('display', ''),
+            'name': item.get('name', ''),
             'price': item.get('price', ''),
             'liquidity': item.get('liquidity', ''),
             'volume_24h': item.get('volume_24h', ''),
             'price_24h_change': item.get('price_24h_change', ''),
             'price_7d_change': item.get('price_7d_change', ''),
         })
+        if limit is not None and len(rows) >= limit:
+            break
     return rows
 
 
