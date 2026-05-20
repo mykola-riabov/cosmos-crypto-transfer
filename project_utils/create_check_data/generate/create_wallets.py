@@ -1,96 +1,58 @@
 import json
 import os
 
-from config.config_files import FileName
 from config.config_path import ConfigPath
 from config.config_path_files import PathFileName
 
 path = ConfigPath()
-filename = FileName()
 path_filename = PathFileName()
 
 _WALLETS_TEMPLATE = '''\
-import json
+"""Generated chain wallets — delegates to project_utils.wallet_derivation."""
 
-from bip_utils import Bip39SeedGenerator, Bip44, Bip44Coins, Bip32Slip10Secp256k1, Bip32KeyIndex
-from cosmpy.aerial.wallet import LocalWallet
-from cosmpy.crypto.keypairs import PrivateKey
+import re
 
-from chain.wallets.get_creds import get_mnemonic
+from project_utils.wallet_derivation import (
+    get_address,
+    get_local_wallet,
+    write_all_wallet_addresses_json,
+)
 
-_bip44_ctx_wallet_1 = None
-_wallet_cache = {{}}
+_WALLET_ATTR_RE = re.compile(r'^(?:wallet_(\\d+)|w(\\d+))_(.+)_chain$', re.IGNORECASE)
+_ADDRESS_ATTR_RE = re.compile(r'^address_(?:wallet_(\\d+)|w(\\d+))_(.+)_chain$', re.IGNORECASE)
 
-# (chain_name, bech32_prefix, slip44 or None)
 _CHAIN_SPECS = [
 {chain_specs}
 ]
 
-_CHAIN_SPEC_BY_NAME = {{name: (prefix, slip) for name, prefix, slip in _CHAIN_SPECS}}
+_CHAIN_NAMES = frozenset(name for name, _prefix, _slip in _CHAIN_SPECS)
 
 
-def _wallet_attr(chain_name):
-    return f"wallet_1_{{chain_name}}_chain"
-
-
-def _address_attr(chain_name):
-    return f"address_wallet_1_{{chain_name}}_chain"
-
-
-def _bip44_context_wallet_1():
-    global _bip44_ctx_wallet_1
-    if _bip44_ctx_wallet_1 is None:
-        mnemonic = get_mnemonic()
-        seed_bytes = Bip39SeedGenerator(mnemonic).Generate()
-        _bip44_ctx_wallet_1 = Bip44.FromSeed(seed_bytes, Bip44Coins.COSMOS).DeriveDefaultPath()
-    return _bip44_ctx_wallet_1
-
-
-def _make_wallet(prefix):
-    ctx = _bip44_context_wallet_1()
-    return LocalWallet(PrivateKey(ctx.PrivateKey().Raw().ToBytes()), prefix=prefix)
-
-
-def _make_wallet_slip44(prefix, slip44):
-    mnemonic = get_mnemonic()
-    seed_bytes = Bip39SeedGenerator(mnemonic).Generate()
-    ctx = Bip32Slip10Secp256k1.FromSeed(seed_bytes)
-    for index in (
-        Bip32KeyIndex.HardenIndex(44),
-        Bip32KeyIndex.HardenIndex(slip44),
-        Bip32KeyIndex.HardenIndex(0),
-        Bip32KeyIndex.UnhardenIndex(0),
-        Bip32KeyIndex.UnhardenIndex(0),
-    ):
-        ctx = ctx.ChildKey(index)
-    return LocalWallet(PrivateKey(ctx.PrivateKey().Raw().ToBytes()), prefix=prefix)
-
-
-def _get_wallet_for_chain(chain_name):
-    if chain_name not in _wallet_cache:
-        prefix, slip44 = _CHAIN_SPEC_BY_NAME[chain_name]
-        if slip44 is not None and slip44 != 118:
-            _wallet_cache[chain_name] = _make_wallet_slip44(prefix, slip44)
-        else:
-            _wallet_cache[chain_name] = _make_wallet(prefix)
-    return _wallet_cache[chain_name]
+def _wallet_id_from_match(m):
+    num = m.group(1) or m.group(2)
+    return f"w{{int(num)}}"
 
 
 def __getattr__(name):
-    for chain_name in _CHAIN_SPEC_BY_NAME:
-        if name == _wallet_attr(chain_name):
-            return _get_wallet_for_chain(chain_name)
-        if name == _address_attr(chain_name):
-            return str(_get_wallet_for_chain(chain_name).address())
+    m = _WALLET_ATTR_RE.match(name)
+    if m:
+        wallet_id = _wallet_id_from_match(m)
+        chain = m.group(3)
+        if chain not in _CHAIN_NAMES:
+            raise AttributeError(name)
+        return get_local_wallet(wallet_id, chain)
+    m = _ADDRESS_ATTR_RE.match(name)
+    if m:
+        wallet_id = _wallet_id_from_match(m)
+        chain = m.group(3)
+        if chain not in _CHAIN_NAMES:
+            raise AttributeError(name)
+        return get_address(wallet_id, chain)
     raise AttributeError(f"module {{__name__!r}} has no attribute {{name!r}}")
 
 
 def write_address_variables_to_json(file_path):
-    data = {{}}
-    for chain_name in _CHAIN_SPEC_BY_NAME:
-        data[_address_attr(chain_name)] = str(_get_wallet_for_chain(chain_name).address())
-    with open(file_path, 'w', encoding='utf-8') as file:
-        json.dump(data, file, indent=4)
+    write_all_wallet_addresses_json(file_path, enabled_networks=set(_CHAIN_NAMES))
 '''
 
 

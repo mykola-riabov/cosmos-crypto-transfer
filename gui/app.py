@@ -2,7 +2,7 @@ import queue
 import threading
 import time
 import tkinter as tk
-from tkinter import messagebox, scrolledtext, ttk
+from tkinter import messagebox, scrolledtext, simpledialog, ttk
 from typing import Optional
 
 from config.config_path import ConfigPath
@@ -29,7 +29,6 @@ NAV_LABELS = (
     'Send',
     'Receive',
     'History',
-    'Assets',
     '—',
     'Networks',
     'Tokens',
@@ -74,7 +73,6 @@ class CosmosGuiApp(tk.Tk):
         self._build_transfer_tab()
         self._build_receive_tab()
         self._build_history_tab()
-        self._build_balances_tab()
         self._build_networks_tab()
         self._build_tokens_tab()
         self._build_denoms_tab()
@@ -87,6 +85,12 @@ class CosmosGuiApp(tk.Tk):
         self.after(50, self._poll_main_callbacks)
         self.refresh_status()
         self.after(800, self._schedule_balance_refresh)
+        self.protocol('WM_DELETE_WINDOW', self._on_app_close)
+
+    def _on_app_close(self):
+        if hasattr(self, 'osmo_tree'):
+            self._save_market_tree_layout()
+        self.destroy()
 
     def _build_layout(self):
         outer = ttk.Frame(self, padding=(10, 8))
@@ -135,7 +139,6 @@ class CosmosGuiApp(tk.Tk):
         self.tab_transfer = ttk.Frame(self._page_stack, padding=12)
         self.tab_receive = ttk.Frame(self._page_stack, padding=12)
         self.tab_history = ttk.Frame(self._page_stack, padding=12)
-        self.tab_balances = ttk.Frame(self._page_stack, padding=12)
         self.tab_networks = ttk.Frame(self._page_stack, padding=12)
         self.tab_tokens = ttk.Frame(self._page_stack, padding=12)
         self.tab_denoms = ttk.Frame(self._page_stack, padding=12)
@@ -150,7 +153,6 @@ class CosmosGuiApp(tk.Tk):
             'Send': self.tab_transfer,
             'Receive': self.tab_receive,
             'History': self.tab_history,
-            'Assets': self.tab_balances,
             'Networks': self.tab_networks,
             'Tokens': self.tab_tokens,
             'Denoms': self.tab_denoms,
@@ -202,7 +204,7 @@ class CosmosGuiApp(tk.Tk):
             return
         self._last_nav = label
         self._show_nav_page(label)
-        if label in ('Portfolio', 'Send', 'Assets'):
+        if label in ('Portfolio', 'Send'):
             self._refresh_wallet_balances(quiet=True)
         elif label == 'Receive':
             self._load_receive_addresses()
@@ -210,6 +212,13 @@ class CosmosGuiApp(tk.Tk):
             self._refresh_networks_table()
         elif label == 'Tokens':
             self._refresh_tokens_chain_filter()
+            if not self._token_rows:
+                self._try_restore_tokens_cache()
+            self._maybe_auto_refresh_tokens()
+        elif label == 'Market':
+            if not self._osmo_rows:
+                self._try_restore_market_cache()
+            self._maybe_auto_refresh_market()
         elif label == 'Denoms':
             self._refresh_denoms_table()
         elif label == 'Address book':
@@ -466,29 +475,37 @@ class CosmosGuiApp(tk.Tk):
         enabled = services.get_wallet_networks()
         if enabled:
             rows = [r for r in rows if getattr(r, 'network', None) in enabled]
-        summaries = services.summarize_wallet_balances(rows)
+        from project_utils.wallet_profiles import row_belongs_to_active_wallet
+
+        rows = [r for r in rows if row_belongs_to_active_wallet(r.wallet_name)]
         if hasattr(self, 'lbl_portfolio_status'):
             try:
                 from gui.wallet_views import balance_rows_to_assets
                 from project_utils.token_catalog import get_token_catalog
 
                 catalog = get_token_catalog()
+                chain_rest = services.chain_rest_urls()
                 usd_prices = {}
                 if self.settings.get('show_fiat_prices', True):
                     from project_utils.coingecko_prices import fetch_usd_prices
 
                     ids = set()
                     for row in rows:
-                        if row.denom and not row.error:
-                            cg = catalog.get_coingecko_id(row.network, row.denom)
-                            if cg:
-                                ids.add(cg)
+                        if not row.denom or row.error:
+                            continue
+                        if row.denom.lower().startswith('ibc/'):
+                            rest = chain_rest.get(row.network)
+                            if rest:
+                                catalog.ensure_ibc_denom_resolved(row.network, row.denom, rest)
+                        cg = catalog.resolve_coingecko_id(row.network, row.denom)
+                        if cg:
+                            ids.add(cg)
                     usd_prices = fetch_usd_prices(ids)
                 assets = balance_rows_to_assets(
                     rows,
                     catalog=catalog,
                     usd_prices=usd_prices,
-                    chain_rest_by_network=services.chain_rest_urls(),
+                    chain_rest_by_network=chain_rest,
                 )
                 total_usd = 0.0
                 for asset in assets:
@@ -520,47 +537,17 @@ class CosmosGuiApp(tk.Tk):
                 self.lbl_portfolio_total.configure(text=f'≈ ${total_usd:,.2f} USD')
             else:
                 self.lbl_portfolio_total.configure(text='Portfolio (enable fiat in Settings for USD)')
-            nets = ', '.join(sorted(services.get_wallet_networks()))
-            self.lbl_portfolio_status.configure(
-                text=f'{len(assets)} asset(s) · networks: {nets or "none"}',
-            )
-        if hasattr(self, 'balances_tree'):
-            for item in self.balances_tree.get_children():
-                self.balances_tree.delete(item)
-            for row in rows:
-                if row.error:
-                    sym = ''
-                    amount_h = ''
-                elif row.denom == '(empty)':
-                    sym = '—'
-                    amount_h = '0'
-                else:
-                    from project_utils.token_catalog import get_token_catalog
-
-                    sym = get_token_catalog().label_for_denom(row.network, row.denom)
-                    amount_h = services.format_balance_display(
-                        row.network, row.denom, row.amount
-                    )
-                self.balances_tree.insert(
-                    '',
-                    tk.END,
-                    values=(
-                        row.wallet_name,
-                        row.network,
-                        sym,
-                        amount_h,
-                        row.error or '',
-                    ),
-                )
+            self._refresh_portfolio_wallet_header()
+            self.lbl_portfolio_status.configure(text='')
         if missed:
             self.log('Networks without client: ' + ', '.join(missed))
 
-    def _refresh_wallet_balances(self, quiet: bool = False):
+    def _refresh_wallet_balances(self, quiet: bool = False, force: bool = False):
         if self._balance_fetch_in_progress or not self._can_fetch_balances():
             return
 
         def worker():
-            return services.fetch_balances()
+            return services.fetch_balances(force=force)
 
         def on_success(result):
             rows, missed = result
@@ -595,17 +582,32 @@ class CosmosGuiApp(tk.Tk):
 
     def _build_portfolio_tab(self):
         header = ttk.Frame(self.tab_portfolio)
-        header.pack(fill=tk.X, pady=(0, 12))
+        header.pack(fill=tk.X, pady=(0, 8))
         self.lbl_portfolio_total = ttk.Label(header, text='Portfolio', font=('', 16, 'bold'))
         self.lbl_portfolio_total.pack(side=tk.LEFT)
-        ttk.Button(header, text='Refresh', command=lambda: self._refresh_wallet_balances()).pack(
+        ttk.Button(header, text='Refresh', command=lambda: self._refresh_wallet_balances(force=True)).pack(
             side=tk.RIGHT, padx=4,
         )
         ttk.Button(header, text='Send', command=lambda: self._go_nav('Send')).pack(side=tk.RIGHT, padx=4)
         ttk.Button(header, text='Receive', command=lambda: self._go_nav('Receive')).pack(side=tk.RIGHT)
 
-        self.lbl_portfolio_status = self._muted_label(self.tab_portfolio, text='Loading…')
-        self.lbl_portfolio_status.pack(anchor=tk.W, pady=(0, 8))
+        wallet_row = ttk.Frame(self.tab_portfolio)
+        wallet_row.pack(fill=tk.X, pady=(0, 6))
+        self.lbl_portfolio_wallet = ttk.Label(wallet_row, text='Wallet: —', font=('', 10, 'bold'))
+        self.lbl_portfolio_wallet.pack(side=tk.LEFT)
+        ttk.Button(wallet_row, text='Rename', command=self._portfolio_rename_wallet).pack(
+            side=tk.LEFT, padx=(10, 4),
+        )
+        ttk.Button(wallet_row, text='New wallet…', command=self._portfolio_create_wallet).pack(
+            side=tk.LEFT, padx=(0, 4),
+        )
+        ttk.Button(wallet_row, text='Manage wallets…', command=self._portfolio_manage_wallets).pack(
+            side=tk.LEFT,
+        )
+
+        self.lbl_portfolio_status = self._muted_label(self.tab_portfolio, text='')
+        self.lbl_portfolio_status.pack(anchor=tk.W, pady=(0, 4))
+        self._refresh_portfolio_wallet_header()
 
         portfolio_toolbar = ttk.Frame(self.tab_portfolio)
         portfolio_toolbar.pack(fill=tk.X, pady=(0, 6))
@@ -636,6 +638,186 @@ class CosmosGuiApp(tk.Tk):
         self.portfolio_tree.configure(yscrollcommand=scroll.set)
         self.portfolio_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+    def _refresh_portfolio_wallet_header(self):
+        if not hasattr(self, 'lbl_portfolio_wallet'):
+            return
+        wid, label = services.active_wallet_display()
+        self.lbl_portfolio_wallet.configure(text=f'Wallet: {label}  ({wid})')
+
+    def _portfolio_create_wallet(self):
+        from gui.wallet_dialog import show_create_wallet_dialog
+
+        new_id = show_create_wallet_dialog(self)
+        if new_id:
+            self.log(f'Created / activated wallet {new_id}')
+            self._on_wallet_context_changed()
+
+    def _on_wallet_context_changed(self):
+        """Refresh all wallet-dependent UI after create or switch."""
+        self._refresh_portfolio_wallet_header()
+        self.refresh_status()
+        self._refresh_wallet_balances(quiet=False)
+        if hasattr(self, 'addr_tree'):
+            self._load_addresses()
+        if hasattr(self, 'receive_tree'):
+            self._load_receive_addresses()
+        if self._last_nav == 'Send' and hasattr(self, 'var_source'):
+            self._on_source_changed()
+            self._refresh_send_balances()
+
+    def _portfolio_rename_wallet(self):
+        from project_utils.wallet_profiles import get_active_wallet_id, rename_wallet
+
+        wid = get_active_wallet_id()
+        _, current = services.active_wallet_display()
+        dialog = tk.Toplevel(self)
+        dialog.title('Rename wallet')
+        dialog.transient(self)
+        dialog.grab_set()
+        ttk.Label(dialog, text=f'Display name for {wid}:').pack(anchor=tk.W, padx=12, pady=(12, 4))
+        name_var = tk.StringVar(value=current)
+        ttk.Entry(dialog, textvariable=name_var, width=32).pack(padx=12, pady=(0, 8))
+
+        def save():
+            try:
+                rename_wallet(wid, name_var.get())
+            except Exception as exc:
+                messagebox.showerror('Rename wallet', str(exc), parent=dialog)
+                return
+            dialog.destroy()
+            self._refresh_portfolio_wallet_header()
+            self.log(f'Wallet renamed: {name_var.get().strip()}')
+
+        btn_row = ttk.Frame(dialog)
+        btn_row.pack(pady=12)
+        ttk.Button(btn_row, text='Save', command=save).pack(side=tk.LEFT, padx=6)
+        ttk.Button(btn_row, text='Cancel', command=dialog.destroy).pack(side=tk.LEFT, padx=6)
+
+    def _portfolio_manage_wallets(self):
+        from project_utils.wallet_profiles import (
+            list_wallet_profiles,
+            rename_wallet,
+            set_active_wallet,
+        )
+
+        dialog = tk.Toplevel(self)
+        dialog.title('Wallets')
+        dialog.transient(self)
+        dialog.geometry('420x320')
+        dialog.grab_set()
+
+        ttk.Label(
+            dialog,
+            text='Each wallet has its own mnemonic in the KeePass vault. The active wallet is used for Send and Portfolio.',
+            wraplength=380,
+        ).pack(anchor=tk.W, padx=12, pady=(12, 8))
+
+        list_frame = ttk.Frame(dialog)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=12, pady=4)
+        scroll = ttk.Scrollbar(list_frame, orient=tk.VERTICAL)
+        lb = tk.Listbox(list_frame, height=8, yscrollcommand=scroll.set, exportselection=False)
+        scroll.config(command=lb.yview)
+        lb.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def refresh_list(select_id=None):
+            lb.delete(0, tk.END)
+            profiles = list_wallet_profiles()
+            select_idx = 0
+            for i, p in enumerate(profiles):
+                mark = '● ' if p['active'] else '  '
+                lb.insert(tk.END, f"{mark}{p['label']}  ({p['id']})")
+                if select_id and p['id'] == select_id:
+                    select_idx = i
+                elif p['active'] and select_id is None:
+                    select_idx = i
+            lb.selection_set(select_idx)
+            lb.see(select_idx)
+
+        refresh_list()
+
+        def selected_profile():
+            sel = lb.curselection()
+            if not sel:
+                return None
+            profiles = list_wallet_profiles()
+            if sel[0] >= len(profiles):
+                return None
+            return profiles[sel[0]]
+
+        def on_use():
+            p = selected_profile()
+            if not p:
+                return
+            try:
+                services.activate_wallet(p['id'])
+            except Exception as exc:
+                messagebox.showerror('Wallets', str(exc), parent=dialog)
+                return
+            self._on_wallet_context_changed()
+            refresh_list(p['id'])
+
+        def on_rename():
+            p = selected_profile()
+            if not p:
+                return
+            name = simpledialog.askstring(
+                'Rename wallet',
+                f"Name for {p['id']}:",
+                initialvalue=p['label'],
+                parent=dialog,
+            )
+            if not name:
+                return
+            try:
+                rename_wallet(p['id'], name)
+            except Exception as exc:
+                messagebox.showerror('Wallets', str(exc), parent=dialog)
+                return
+            refresh_list(p['id'])
+            self._refresh_portfolio_wallet_header()
+
+        def on_create():
+            from gui.wallet_dialog import show_create_wallet_dialog
+
+            dialog.withdraw()
+            try:
+                new_id = show_create_wallet_dialog(self)
+            finally:
+                dialog.deiconify()
+            if not new_id:
+                return
+            self.log(f'Created wallet {new_id}')
+            self._on_wallet_context_changed()
+            refresh_list(new_id)
+
+        def on_delete():
+            p = selected_profile()
+            if not p:
+                return
+            if not messagebox.askyesno(
+                'Delete wallet',
+                f"Remove profile “{p['label']}” ({p['id']})?",
+                parent=dialog,
+            ):
+                return
+            try:
+                services.delete_wallet_full(p['id'])
+            except Exception as exc:
+                messagebox.showerror('Wallets', str(exc), parent=dialog)
+                return
+            self.log(f'Deleted wallet {p["id"]}')
+            self._on_wallet_context_changed()
+            refresh_list()
+
+        btn_row = ttk.Frame(dialog)
+        btn_row.pack(fill=tk.X, padx=12, pady=12)
+        ttk.Button(btn_row, text='Use', command=on_use).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_row, text='Rename', command=on_rename).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_row, text='New', command=on_create).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_row, text='Delete', command=on_delete).pack(side=tk.LEFT, padx=2)
+        ttk.Button(btn_row, text='Close', command=dialog.destroy).pack(side=tk.RIGHT, padx=2)
 
     def _map_portfolio_token(self):
         if not hasattr(self, 'portfolio_tree'):
@@ -742,6 +924,30 @@ class CosmosGuiApp(tk.Tk):
 
         toolbar = ttk.Frame(self.tab_receive)
         toolbar.pack(fill=tk.X)
+        self.var_receive_filter = tk.StringVar()
+        self.var_receive_filter.trace_add('write', lambda *_a: self._filter_receive_addresses())
+        self.var_receive_all_wallets = tk.BooleanVar(
+            value=bool(self.settings.get('receive_all_wallets', False)),
+        )
+        ttk.Label(toolbar, text='Filter:').pack(side=tk.LEFT)
+        ttk.Entry(toolbar, textvariable=self.var_receive_filter, width=24).pack(side=tk.LEFT, padx=6)
+        recv_wallet_scope = ttk.Frame(toolbar)
+        recv_wallet_scope.pack(side=tk.LEFT, padx=(8, 6))
+        ttk.Label(recv_wallet_scope, text='Wallets:').pack(side=tk.LEFT)
+        ttk.Radiobutton(
+            recv_wallet_scope,
+            text='Active only',
+            variable=self.var_receive_all_wallets,
+            value=False,
+            command=self._on_receive_wallet_scope_changed,
+        ).pack(side=tk.LEFT, padx=(4, 0))
+        ttk.Radiobutton(
+            recv_wallet_scope,
+            text='All wallets',
+            variable=self.var_receive_all_wallets,
+            value=True,
+            command=self._on_receive_wallet_scope_changed,
+        ).pack(side=tk.LEFT, padx=(4, 0))
         ttk.Button(toolbar, text='Reload', command=self._load_receive_addresses).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Button(toolbar, text='Copy address', command=self._copy_receive_address).pack(side=tk.LEFT)
 
@@ -760,18 +966,53 @@ class CosmosGuiApp(tk.Tk):
         scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
         self.receive_tree.bind('<Double-1>', lambda _e: self._copy_receive_address())
 
+        self._receive_entries = []
+        self.lbl_receive_scope = self._muted_label(self.tab_receive, text='')
+        self.lbl_receive_scope.pack(anchor=tk.W, pady=(0, 4))
+        self._load_receive_addresses()
+
+    def _on_receive_wallet_scope_changed(self):
+        if hasattr(self, 'var_receive_all_wallets'):
+            self.settings['receive_all_wallets'] = bool(self.var_receive_all_wallets.get())
+            save_settings(self.settings)
+        self._load_receive_addresses()
+
     def _load_receive_addresses(self):
         if not hasattr(self, 'receive_tree'):
             return
-        entries = services.load_address_book_entries()
+        all_wallets = bool(self.var_receive_all_wallets.get()) if hasattr(self, 'var_receive_all_wallets') else False
+        self._receive_entries = services.load_address_book_entries(all_wallets=all_wallets)
+        if hasattr(self, 'lbl_receive_scope'):
+            wid, label = services.active_wallet_display()
+            if all_wallets:
+                self.lbl_receive_scope.configure(
+                    text=f'Showing all wallets ({len(self._receive_entries)} address(es), enabled networks).',
+                )
+            else:
+                self.lbl_receive_scope.configure(
+                    text=f'Active wallet: {label} ({wid}) — {len(self._receive_entries)} address(es).',
+                )
+        self._filter_receive_addresses()
+
+    def _filter_receive_addresses(self):
+        if not hasattr(self, 'receive_tree'):
+            return
+        needle = ''
+        if hasattr(self, 'var_receive_filter'):
+            needle = self.var_receive_filter.get().strip().lower()
         for item in self.receive_tree.get_children():
             self.receive_tree.delete(item)
-        for entry in entries:
+        for entry in getattr(self, '_receive_entries', []):
+            hay = f'{entry.get("name", "")} {entry.get("network", "")} {entry.get("address", "")}'.lower()
+            if needle and needle not in hay:
+                continue
+            addr = entry.get('address', '')
+            network = entry.get('network', '')
             self.receive_tree.insert(
                 '',
                 tk.END,
-                iid=entry.get('address', ''),
-                values=(entry.get('network', ''), entry.get('name', ''), entry.get('address', '')),
+                iid=f'{network}:{addr}' if network and addr else None,
+                values=(network, entry.get('name', ''), addr),
             )
 
     def _copy_receive_address(self):
@@ -1358,6 +1599,7 @@ class CosmosGuiApp(tk.Tk):
 
     def _transfer_done(self, tx_hash: str, route, preview, gas_limit: int):
         self._refresh_history_table()
+        self._refresh_wallet_balances(quiet=True, force=True)
         self.log(f'Transaction hash: {tx_hash}')
         messagebox.showinfo(
             'Success',
@@ -1368,80 +1610,172 @@ class CosmosGuiApp(tk.Tk):
         self._preview = None
         self.btn_send.configure(state=tk.DISABLED)
 
+    def _history_visible_columns(self) -> list:
+        from gui.history_view import HISTORY_COLUMN_IDS, default_visible_columns
+
+        saved = self.settings.get('history_visible_columns')
+        if isinstance(saved, list) and saved:
+            return [c for c in saved if c in HISTORY_COLUMN_IDS]
+        return default_visible_columns()
+
+    def _history_status_filter_set(self) -> set:
+        from gui.history_view import KNOWN_STATUSES, default_status_filter
+
+        saved = self.settings.get('history_status_filter')
+        if isinstance(saved, list) and saved:
+            return {s.lower() for s in saved if s.lower() in KNOWN_STATUSES}
+        return {s.lower() for s in default_status_filter()}
+
     def _build_history_tab(self):
+        from gui.history_view import HISTORY_COLUMN_IDS, KNOWN_STATUSES, column_specs
+
         ttk.Label(self.tab_history, text='Transaction history', font=('', 11, 'bold')).pack(
             anchor=tk.W, pady=(0, 8),
         )
         self._muted_label(
             self.tab_history,
-            text='IBC sends from this app. Select a row and copy the hash, or double-click a row.',
+            text='IBC transfers from this app. Filter by date and status; choose columns. Double-click a row to copy tx hash.',
             wraplength=900,
         ).pack(anchor=tk.W, pady=(0, 8))
 
         toolbar = ttk.Frame(self.tab_history)
-        toolbar.pack(fill=tk.X)
+        toolbar.pack(fill=tk.X, pady=(0, 4))
         ttk.Button(toolbar, text='Refresh', command=self._refresh_history_table).pack(side=tk.LEFT, padx=(0, 6))
-        ttk.Button(toolbar, text='Copy hash', command=self._copy_history_hash).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text='Copy hash', command=self._copy_history_hash).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(toolbar, text='Columns…', command=self._history_choose_columns).pack(side=tk.LEFT)
 
-        cols = ('time', 'status', 'route', 'symbol', 'amount', 'timeout', 'gas', 'tx_hash')
-        self.history_tree = ttk.Treeview(self.tab_history, columns=cols, show='headings', height=18)
-        for col, title, width in [
-            ('time', 'Time (UTC)', 150),
-            ('status', 'Status', 72),
-            ('route', 'Route', 130),
-            ('symbol', 'Token', 56),
-            ('amount', 'Amount', 72),
-            ('timeout', 'Timeout', 100),
-            ('gas', 'Gas', 64),
-            ('tx_hash', 'Tx hash', 280),
-        ]:
-            self.history_tree.heading(col, text=title)
-            self.history_tree.column(col, width=width, stretch=col == 'tx_hash')
-        scroll = ttk.Scrollbar(self.tab_history, orient=tk.VERTICAL, command=self.history_tree.yview)
-        self.history_tree.configure(yscrollcommand=scroll.set)
-        self.history_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
+        filter_row = ttk.Frame(self.tab_history)
+        filter_row.pack(fill=tk.X, pady=(0, 4))
+        ttk.Label(filter_row, text='Date from').pack(side=tk.LEFT)
+        self.var_history_date_from = tk.StringVar(value='')
+        ttk.Entry(filter_row, textvariable=self.var_history_date_from, width=12).pack(side=tk.LEFT, padx=(4, 12))
+        ttk.Label(filter_row, text='to').pack(side=tk.LEFT)
+        self.var_history_date_to = tk.StringVar(value='')
+        ttk.Entry(filter_row, textvariable=self.var_history_date_to, width=12).pack(side=tk.LEFT, padx=(4, 12))
+        self._muted_label(filter_row, text='(YYYY-MM-DD, empty = any)', track=False).pack(side=tk.LEFT)
+
+        status_row = ttk.Frame(self.tab_history)
+        status_row.pack(fill=tk.X, pady=(0, 4))
+        ttk.Label(status_row, text='Events:').pack(side=tk.LEFT)
+        self._history_status_vars: dict = {}
+        active_statuses = self._history_status_filter_set()
+        for st in KNOWN_STATUSES:
+            var = tk.BooleanVar(value=st in active_statuses)
+            self._history_status_vars[st] = var
+            ttk.Checkbutton(
+                status_row,
+                text=st,
+                variable=var,
+                command=self._refresh_history_table,
+            ).pack(side=tk.LEFT, padx=(6, 0))
+
+        self.lbl_history_count = self._muted_label(self.tab_history, text='')
+        self.lbl_history_count.pack(anchor=tk.W, pady=(0, 4))
+
+        self._history_column_ids = list(HISTORY_COLUMN_IDS)
+        tree_frame = ttk.Frame(self.tab_history)
+        tree_frame.pack(fill=tk.BOTH, expand=True, pady=8)
+        tree_frame.grid_rowconfigure(0, weight=1)
+        tree_frame.grid_columnconfigure(0, weight=1)
+        self.history_tree = ttk.Treeview(
+            tree_frame,
+            columns=self._history_column_ids,
+            show='headings',
+            height=18,
+        )
+        spec_by_id = {spec[0]: spec for spec in column_specs()}
+        for col_id in self._history_column_ids:
+            title, width, stretch = spec_by_id[col_id][1], spec_by_id[col_id][2], spec_by_id[col_id][3]
+            self.history_tree.heading(col_id, text=title)
+            self.history_tree.column(col_id, width=width, stretch=stretch, minwidth=40)
+        vscroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.history_tree.yview)
+        hscroll = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.history_tree.xview)
+        self.history_tree.configure(yscrollcommand=vscroll.set, xscrollcommand=hscroll.set)
+        self.history_tree.grid(row=0, column=0, sticky='nsew')
+        vscroll.grid(row=0, column=1, sticky='ns')
+        hscroll.grid(row=1, column=0, sticky='ew')
         self.history_tree.bind('<Double-1>', lambda _e: self._copy_history_hash())
         self.history_tree.tag_configure('success', foreground=self.colors.success)
         self.history_tree.tag_configure('failed', foreground=self.colors.error)
         self.history_tree.tag_configure('pending', foreground=self.colors.muted)
+        self._history_rows_by_iid: dict = {}
+        self._apply_history_column_visibility()
+        self.var_history_date_from.trace_add('write', lambda *_a: self._refresh_history_table())
+        self.var_history_date_to.trace_add('write', lambda *_a: self._refresh_history_table())
         self._refresh_history_table()
+
+    def _apply_history_column_visibility(self):
+        if not hasattr(self, 'history_tree'):
+            return
+        visible = self._history_visible_columns()
+        self.history_tree['displaycolumns'] = visible
+
+    def _history_choose_columns(self):
+        from gui.history_view import HISTORY_COLUMN_IDS, column_specs
+
+        dialog = tk.Toplevel(self)
+        dialog.title('History columns')
+        dialog.transient(self)
+        dialog.grab_set()
+        ttk.Label(dialog, text='Show columns (at least one):').pack(anchor=tk.W, padx=12, pady=(12, 6))
+        vars_map: dict = {}
+        visible = set(self._history_visible_columns())
+        spec_titles = {spec[0]: spec[1] for spec in column_specs()}
+        frame = ttk.Frame(dialog)
+        frame.pack(fill=tk.BOTH, expand=True, padx=12)
+        for col_id in HISTORY_COLUMN_IDS:
+            var = tk.BooleanVar(value=col_id in visible)
+            vars_map[col_id] = var
+            ttk.Checkbutton(frame, text=spec_titles.get(col_id, col_id), variable=var).pack(anchor=tk.W)
+
+        def save():
+            chosen = [c for c in HISTORY_COLUMN_IDS if vars_map[c].get()]
+            if not chosen:
+                messagebox.showerror('Columns', 'Select at least one column.', parent=dialog)
+                return
+            self.settings['history_visible_columns'] = chosen
+            save_settings(self.settings)
+            dialog.destroy()
+            self._apply_history_column_visibility()
+            self._refresh_history_table()
+
+        btn_row = ttk.Frame(dialog)
+        btn_row.pack(pady=12)
+        ttk.Button(btn_row, text='Apply', command=save).pack(side=tk.LEFT, padx=6)
+        ttk.Button(btn_row, text='Cancel', command=dialog.destroy).pack(side=tk.LEFT, padx=6)
 
     def _refresh_history_table(self):
         if not hasattr(self, 'history_tree'):
             return
+        from gui.history_view import row_values, status_tag
+
+        visible = self._history_visible_columns()
+        statuses = {st for st, var in self._history_status_vars.items() if var.get()}
+        self.settings['history_status_filter'] = sorted(statuses)
+        try:
+            rows = services.filtered_tx_history(
+                date_from=self.var_history_date_from.get(),
+                date_to=self.var_history_date_to.get(),
+                statuses=statuses,
+            )
+        except ValueError as exc:
+            self.lbl_history_count.configure(text=str(exc))
+            return
+        total = len(services.list_tx_history())
+        self.lbl_history_count.configure(
+            text=f'Showing {len(rows)} of {total} event(s) · columns: {len(visible)} · statuses: {", ".join(sorted(statuses)) or "none"}',
+        )
         for item in self.history_tree.get_children():
             self.history_tree.delete(item)
-        for row in services.list_tx_history():
-            route = f'{row.get("source", "")} → {row.get("destination", "")}'
-            status = row.get('status', '')
-            if status == 'success':
-                tags = ('success',)
-            elif status == 'failed':
-                tags = ('failed',)
-            else:
-                tags = ('pending',)
-            mode = row.get('timeout_mode', 'time')
-            tval = row.get('timeout_value', '')
-            timeout_col = row.get('timeout_display') or (
-                f'{tval}s' if mode == 'time' else f'+{tval} blk'
-            )
-            tx = row.get('tx_hash', '') or row.get('error', '')[:48]
-            self.history_tree.insert(
+        self._history_rows_by_iid.clear()
+        for row in rows:
+            iid = self.history_tree.insert(
                 '',
                 tk.END,
-                values=(
-                    row.get('time', ''),
-                    status,
-                    route,
-                    row.get('symbol', ''),
-                    row.get('amount', ''),
-                    timeout_col,
-                    row.get('gas', ''),
-                    tx,
-                ),
-                tags=tags,
+                values=row_values(row, self._history_column_ids),
+                tags=status_tag(row.get('status', '')),
             )
+            self._history_rows_by_iid[iid] = row
 
     def _copy_history_hash(self):
         if not hasattr(self, 'history_tree'):
@@ -1450,45 +1784,13 @@ class CosmosGuiApp(tk.Tk):
         if not item:
             messagebox.showinfo('History', 'Select a row first.')
             return
-        values = self.history_tree.item(item, 'values')
-        tx_hash = values[7] if len(values) > 7 else ''
-        if not tx_hash or tx_hash.startswith('out of gas') or len(tx_hash) < 16:
-            messagebox.showinfo('History', 'No transaction hash for this row (failed or pending).')
+        row = self._history_rows_by_iid.get(item, {})
+        tx_hash = (row.get('tx_hash') or '').strip()
+        if not tx_hash or len(tx_hash) < 16:
+            messagebox.showinfo('History', 'No transaction hash for this row (failed, preview, or pending).')
             return
         self._copy_text_to_clipboard(tx_hash)
         self.log(f'Copied tx hash: {tx_hash}')
-
-    def _build_balances_tab(self):
-        ttk.Label(self.tab_balances, text='Assets — all token balances', font=('', 11, 'bold')).pack(
-            anchor=tk.W, pady=(0, 8),
-        )
-        toolbar = ttk.Frame(self.tab_balances)
-        toolbar.pack(fill=tk.X)
-        ttk.Button(
-            toolbar,
-            text='Refresh now',
-            command=lambda: self._refresh_wallet_balances(),
-        ).pack(side=tk.LEFT)
-        self._muted_label(
-            toolbar,
-            text='  Detailed list · auto-refresh in Settings',
-        ).pack(side=tk.LEFT, padx=8)
-
-        cols = ('wallet', 'network', 'symbol', 'amount', 'error')
-        self.balances_tree = ttk.Treeview(self.tab_balances, columns=cols, show='headings', height=18)
-        for col, title, width in [
-            ('wallet', 'Wallet', 120),
-            ('network', 'Network', 100),
-            ('symbol', 'Token', 80),
-            ('amount', 'Amount', 180),
-            ('error', 'Error', 200),
-        ]:
-            self.balances_tree.heading(col, text=title)
-            self.balances_tree.column(col, width=width, stretch=col == 'amount')
-        scroll = ttk.Scrollbar(self.tab_balances, orient=tk.VERTICAL, command=self.balances_tree.yview)
-        self.balances_tree.configure(yscrollcommand=scroll.set)
-        self.balances_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
 
     def _send_token_list_mode(self) -> str:
         if hasattr(self, 'var_send_token_list'):
@@ -1732,9 +2034,8 @@ class CosmosGuiApp(tk.Tk):
         intro = ttk.Label(
             self.tab_tokens,
             text=(
-                'Tokens from chain-registry assetlist.json (denom / contract). '
-                'Osmosis DEX prices merged from Numia API when a denom matches. '
-                'Rebuild catalog via Setup → step 3 (Collect chain-registry JSON).'
+                'Chain-registry tokens. Filter by network, then by symbol or display name. '
+                'Osmosis DEX prices from Numia when denom matches. Setup → step 3 to rebuild catalog.'
             ),
             wraplength=920,
         )
@@ -1742,7 +2043,7 @@ class CosmosGuiApp(tk.Tk):
 
         toolbar = ttk.Frame(self.tab_tokens)
         toolbar.pack(fill=tk.X)
-        ttk.Label(toolbar, text='Network').pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Label(toolbar, text='Network:').pack(side=tk.LEFT, padx=(0, 6))
         self.var_token_chain = tk.StringVar(value='All')
         self.cmb_token_chain = ttk.Combobox(
             toolbar,
@@ -1751,15 +2052,67 @@ class CosmosGuiApp(tk.Tk):
             width=22,
         )
         self.cmb_token_chain.pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Label(toolbar, text='Search').pack(side=tk.LEFT, padx=(0, 6))
-        self.var_token_search = tk.StringVar()
-        search_entry = ttk.Entry(toolbar, textvariable=self.var_token_search, width=28)
-        search_entry.pack(side=tk.LEFT, padx=(0, 10))
-        search_entry.bind('<Return>', lambda _e: self._load_registry_tokens())
-        ttk.Button(toolbar, text='Load tokens', command=self._load_registry_tokens).pack(side=tk.LEFT)
+        ttk.Label(toolbar, text='Symbol:').pack(side=tk.LEFT, padx=(0, 6))
+        self.var_token_symbol = tk.StringVar()
+        symbol_entry = ttk.Entry(toolbar, textvariable=self.var_token_symbol, width=16)
+        symbol_entry.pack(side=tk.LEFT, padx=(0, 10))
+        symbol_entry.bind('<Return>', lambda _e: self._on_token_symbol_filter())
+        self.var_token_symbol.trace_add('write', lambda *_a: self._on_token_symbol_filter())
+        self.cmb_token_chain.bind('<<ComboboxSelected>>', lambda _e: self._on_token_chain_changed())
+        ttk.Button(
+            toolbar,
+            text='Refresh',
+            command=lambda: self._load_registry_tokens(force=True),
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        self.var_tokens_auto = tk.BooleanVar(value=bool(self.settings.get('tokens_auto_refresh', False)))
+        ttk.Checkbutton(
+            toolbar,
+            text='Auto-refresh',
+            variable=self.var_tokens_auto,
+            command=self._on_tokens_auto_changed,
+        ).pack(side=tk.LEFT)
+        tsec = max(30, min(86400, int(self.settings.get('tokens_auto_refresh_seconds', 3600))))
+        self.var_tokens_auto_sec = tk.StringVar(value=str(tsec))
+        ttk.Label(toolbar, text='every').pack(side=tk.LEFT, padx=(8, 2))
+        self.spin_tokens_auto_sec = ttk.Spinbox(
+            toolbar,
+            from_=30,
+            to=86400,
+            width=7,
+            textvariable=self.var_tokens_auto_sec,
+        )
+        self.spin_tokens_auto_sec.pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(toolbar, text='s').pack(side=tk.LEFT)
+        self.spin_tokens_auto_sec.bind('<FocusOut>', lambda _e: self._save_tokens_auto_interval())
+        self.spin_tokens_auto_sec.bind('<Return>', lambda _e: self._save_tokens_auto_interval())
+        self._muted_label(
+            toolbar,
+            text='  Symbol matches ticker / display / name only (not IBC hash). Click headers to sort.',
+            track=False,
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        self._token_rows: list = []
+        self._token_meta: dict = {}
+        self._token_sort_col = 'symbol'
+        self._token_sort_reverse = False
+        self._token_heading_titles = {
+            'network': 'Network',
+            'symbol': 'Symbol',
+            'display': 'Display',
+            'denom': 'Denom / base',
+            'decimals': 'Dec',
+            'contract': 'Contract / IBC',
+            'price': 'Price',
+            'liq': 'Liquidity',
+            'chg24': '24h %',
+        }
 
         cols = ('network', 'symbol', 'display', 'denom', 'decimals', 'contract', 'price', 'liq', 'chg24')
-        self.tokens_tree = ttk.Treeview(self.tab_tokens, columns=cols, show='headings', height=20)
+        tree_frame = ttk.Frame(self.tab_tokens)
+        tree_frame.pack(fill=tk.BOTH, expand=True, pady=8)
+        tree_frame.grid_rowconfigure(0, weight=1)
+        tree_frame.grid_columnconfigure(0, weight=1)
+        self.tokens_tree = ttk.Treeview(tree_frame, columns=cols, show='headings', height=20)
         for col, title, width in [
             ('network', 'Network', 110),
             ('symbol', 'Symbol', 72),
@@ -1771,16 +2124,24 @@ class CosmosGuiApp(tk.Tk):
             ('liq', 'Liquidity', 96),
             ('chg24', '24h %', 64),
         ]:
-            self.tokens_tree.heading(col, text=title)
-            self.tokens_tree.column(col, width=width, stretch=col in ('denom', 'contract'))
-        scroll = ttk.Scrollbar(self.tab_tokens, orient=tk.VERTICAL, command=self.tokens_tree.yview)
-        self.tokens_tree.configure(yscrollcommand=scroll.set)
-        self.tokens_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
+            self.tokens_tree.heading(
+                col,
+                text=title,
+                command=lambda c=col: self._sort_token_column(c),
+            )
+            self.tokens_tree.column(col, width=width, stretch=col in ('denom', 'contract'), minwidth=40)
+        vscroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tokens_tree.yview)
+        hscroll = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tokens_tree.xview)
+        self.tokens_tree.configure(yscrollcommand=vscroll.set, xscrollcommand=hscroll.set)
+        self.tokens_tree.grid(row=0, column=0, sticky='nsew')
+        vscroll.grid(row=0, column=1, sticky='ns')
+        hscroll.grid(row=1, column=0, sticky='ew')
 
         self.lbl_tokens_status = ttk.Label(self.tab_tokens, text='')
         self.lbl_tokens_status.pack(anchor=tk.W)
+        self._tokens_cached_at_iso: Optional[str] = None
         self._refresh_tokens_chain_filter()
+        self._try_restore_tokens_cache()
 
     def _refresh_tokens_chain_filter(self):
         if not hasattr(self, 'cmb_token_chain'):
@@ -1790,48 +2151,207 @@ class CosmosGuiApp(tk.Tk):
         if self.var_token_chain.get() not in chains:
             self.var_token_chain.set(chains[0] if chains else 'All')
 
-    def _load_registry_tokens(self):
+    def _token_matches_symbol(self, row: dict, needle: str) -> bool:
+        needle = (needle or '').strip().lower()
+        if not needle:
+            return True
+        for key in ('symbol', 'display', 'name'):
+            if needle in (row.get(key) or '').lower():
+                return True
+        return False
+
+    def _token_sort_key(self, row: dict, column: str):
+        text_cols = {'network', 'symbol', 'display', 'denom', 'contract'}
+        if column in text_cols:
+            if column == 'network':
+                return (row.get('chain_name') or '').lower()
+            return (row.get(column) or '').lower()
+        if column == 'decimals':
+            try:
+                return int(row.get('decimals') or 0)
+            except (TypeError, ValueError):
+                return 0
+        if column == 'liq':
+            try:
+                return float(row.get('liquidity') or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        if column == 'chg24':
+            try:
+                return float(row.get('price_24h_change') or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        if column == 'price':
+            try:
+                return float(row.get('price') or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        return (row.get(column) or '').lower()
+
+    def _sort_token_column(self, column: str):
+        if self._token_sort_col == column:
+            self._token_sort_reverse = not self._token_sort_reverse
+        else:
+            self._token_sort_col = column
+            self._token_sort_reverse = column not in (
+                'network',
+                'symbol',
+                'display',
+                'denom',
+                'contract',
+            )
+        self._render_tokens_table()
+
+    def _update_token_headings(self):
+        for col, base in self._token_heading_titles.items():
+            arrow = ''
+            if col == self._token_sort_col:
+                arrow = ' ▼' if self._token_sort_reverse else ' ▲'
+            self.tokens_tree.heading(col, text=base + arrow)
+
+    def _token_display_values(self, row: dict) -> tuple:
+        price = row.get('price')
+        liq = row.get('liquidity')
+        chg = row.get('price_24h_change')
+        return (
+            row.get('chain_name', ''),
+            row.get('symbol', ''),
+            row.get('display', ''),
+            row.get('denom', ''),
+            row.get('decimals', ''),
+            row.get('contract', '') or '',
+            f'{float(price):.6g}' if price not in (None, '') else '',
+            f'{float(liq):,.0f}' if liq not in (None, '') else '',
+            f'{float(chg):.4g}' if chg not in (None, '') else '',
+        )
+
+    def _filtered_token_rows(self) -> list:
+        needle = self.var_token_symbol.get() if hasattr(self, 'var_token_symbol') else ''
+        return [r for r in self._token_rows if self._token_matches_symbol(r, needle)]
+
+    def _render_tokens_table(self):
+        if not hasattr(self, 'tokens_tree'):
+            return
+        rows = self._filtered_token_rows()
+        rows.sort(
+            key=lambda r: self._token_sort_key(r, self._token_sort_col),
+            reverse=self._token_sort_reverse,
+        )
+        for item in self.tokens_tree.get_children():
+            self.tokens_tree.delete(item)
+        for row in rows:
+            self.tokens_tree.insert('', tk.END, values=self._token_display_values(row))
+        self._update_token_headings()
+        self._update_tokens_status(len(rows))
+
+    def _on_token_chain_changed(self):
+        self._try_restore_tokens_cache()
+
+    def _clamp_tab_refresh_seconds(self, raw) -> int:
+        try:
+            v = int(str(raw).strip())
+        except (TypeError, ValueError):
+            v = 3600
+        return max(30, min(86400, v))
+
+    def _tokens_auto_refresh_seconds(self) -> int:
+        if hasattr(self, 'var_tokens_auto_sec'):
+            return self._clamp_tab_refresh_seconds(self.var_tokens_auto_sec.get())
+        return self._clamp_tab_refresh_seconds(self.settings.get('tokens_auto_refresh_seconds', 3600))
+
+    def _save_tokens_auto_interval(self):
+        if not hasattr(self, 'var_tokens_auto_sec'):
+            return
+        sec = self._tokens_auto_refresh_seconds()
+        self.settings['tokens_auto_refresh_seconds'] = sec
+        self.var_tokens_auto_sec.set(str(sec))
+        save_settings(self.settings)
+
+    def _on_tokens_auto_changed(self):
+        self.settings['tokens_auto_refresh'] = bool(self.var_tokens_auto.get())
+        if hasattr(self, 'var_tokens_auto_sec'):
+            self.settings['tokens_auto_refresh_seconds'] = self._tokens_auto_refresh_seconds()
+        save_settings(self.settings)
+
+    def _tokens_cache_envelope(self):
+        chain = self.var_token_chain.get() if hasattr(self, 'var_token_chain') else 'All'
+        return services.load_tokens_tab_cache(chain)
+
+    def _tokens_cache_stale(self) -> bool:
+        env = self._tokens_cache_envelope()
+        if not env:
+            return True
+        sec = self._tokens_auto_refresh_seconds()
+        age = time.time() - float(env.get('cached_at', 0))
+        return age > sec
+
+    def _maybe_auto_refresh_tokens(self):
+        if not self.settings.get('tokens_auto_refresh'):
+            return
+        if self._tokens_cache_stale():
+            self._load_registry_tokens(force=True)
+
+    def _apply_tokens_payload(self, rows: list, meta: dict, cached_at_iso: Optional[str] = None):
+        self._token_rows = rows
+        self._token_meta = meta
+        self._tokens_cached_at_iso = cached_at_iso
+        self._render_tokens_table()
+
+    def _try_restore_tokens_cache(self) -> bool:
+        env = self._tokens_cache_envelope()
+        if not env:
+            if hasattr(self, 'lbl_tokens_status'):
+                self.lbl_tokens_status.configure(
+                    text='No cached data — click Refresh to load from registry + Osmosis prices.',
+                )
+            return False
+        payload = env.get('payload') or {}
+        self._apply_tokens_payload(
+            payload.get('rows', []),
+            payload.get('meta', {}),
+            env.get('cached_at_iso'),
+        )
+        return True
+
+    def _update_tokens_status(self, shown: int):
+        meta = getattr(self, '_token_meta', {})
+        parts = [f'Showing {shown} token(s)']
+        if getattr(self, '_tokens_cached_at_iso', None):
+            parts.append(f'cache {self._tokens_cached_at_iso}')
+        if meta.get('registry_loaded') is False:
+            parts = ['No assets_registry.json — run Setup → step 3 (Collect chain-registry JSON)']
+        elif meta.get('truncated'):
+            parts.append(f'(loaded {meta.get("shown", 0)} max — pick one network)')
+        sym = self.var_token_symbol.get().strip() if hasattr(self, 'var_token_symbol') else ''
+        if sym and self._token_rows:
+            parts.append(f'symbol filter “{sym}”')
+        if meta.get('osmosis_prices') is False:
+            parts.append(f'Osmosis prices unavailable: {meta.get("osmosis_error", "")}')
+        self.lbl_tokens_status.configure(text=' · '.join(parts))
+
+    def _on_token_symbol_filter(self):
+        if self._token_rows:
+            self._render_tokens_table()
+
+    def _load_registry_tokens(self, force: bool = False):
+        if not force and self._try_restore_tokens_cache():
+            return
         chain = self.var_token_chain.get()
-        search = self.var_token_search.get()
 
         def worker():
             return services.fetch_registry_token_rows(
                 chain_name=None if chain == 'All' else chain,
-                search=search,
+                symbol_filter=None,
                 with_prices=True,
             )
 
         def on_success(result):
             rows, meta = result
-            for item in self.tokens_tree.get_children():
-                self.tokens_tree.delete(item)
-            for row in rows:
-                price = row.get('price')
-                liq = row.get('liquidity')
-                self.tokens_tree.insert(
-                    '',
-                    tk.END,
-                    values=(
-                        row.get('chain_name', ''),
-                        row.get('symbol', ''),
-                        row.get('display', ''),
-                        row.get('denom', ''),
-                        row.get('decimals', ''),
-                        row.get('contract', '') or '',
-                        f'{float(price):.6g}' if price not in (None, '') else '',
-                        f'{float(liq):,.0f}' if liq not in (None, '') else '',
-                        row.get('price_24h_change', '') if row.get('price_24h_change') is not None else '',
-                    ),
-                )
-            parts = [f'Showing {meta.get("shown", 0)} token(s)']
-            if meta.get('registry_loaded') is False:
-                parts = ['No assets_registry.json — run Setup → step 3 (Collect chain-registry JSON)']
-            elif meta.get('truncated'):
-                parts.append('(list truncated — narrow network or search)')
-            if meta.get('osmosis_prices') is False:
-                parts.append(f'Osmosis prices unavailable: {meta.get("osmosis_error", "")}')
-            self.lbl_tokens_status.configure(text=' · '.join(parts))
-            self.log('Tokens loaded: ' + ' · '.join(parts))
+            services.save_tokens_tab_cache(chain, rows, meta)
+            env = services.load_tokens_tab_cache(chain)
+            cached_iso = env.get('cached_at_iso') if env else None
+            self._apply_tokens_payload(rows, meta, cached_iso)
+            self.log('Tokens refreshed: ' + self.lbl_tokens_status.cget('text'))
 
         self._run_async('Registry tokens', worker, on_success=on_success)
 
@@ -2017,11 +2537,31 @@ class CosmosGuiApp(tk.Tk):
         self.var_addr_filter = tk.StringVar()
         self.var_addr_filter.trace_add('write', lambda *_a: self._filter_addresses())
         self.var_addr_show_all = tk.BooleanVar(value=False)
+        self.var_addr_all_wallets = tk.BooleanVar(
+            value=bool(self.settings.get('address_book_all_wallets', False)),
+        )
         ttk.Label(toolbar, text='Filter:').pack(side=tk.LEFT)
         ttk.Entry(toolbar, textvariable=self.var_addr_filter, width=24).pack(side=tk.LEFT, padx=6)
+        wallet_scope = ttk.Frame(toolbar)
+        wallet_scope.pack(side=tk.LEFT, padx=(8, 6))
+        ttk.Label(wallet_scope, text='Wallets:').pack(side=tk.LEFT)
+        ttk.Radiobutton(
+            wallet_scope,
+            text='Active only',
+            variable=self.var_addr_all_wallets,
+            value=False,
+            command=self._on_address_book_wallet_scope_changed,
+        ).pack(side=tk.LEFT, padx=(4, 0))
+        ttk.Radiobutton(
+            wallet_scope,
+            text='All wallets',
+            variable=self.var_addr_all_wallets,
+            value=True,
+            command=self._on_address_book_wallet_scope_changed,
+        ).pack(side=tk.LEFT, padx=(4, 0))
         ttk.Checkbutton(
             toolbar,
-            text='Show all networks in file',
+            text='All networks in file',
             variable=self.var_addr_show_all,
             command=self._load_addresses,
         ).pack(side=tk.LEFT, padx=6)
@@ -2048,11 +2588,33 @@ class CosmosGuiApp(tk.Tk):
         self.addr_tree.bind('<Double-1>', lambda _e: self._copy_address_book_address())
 
         self._address_entries = []
+        self.lbl_addr_scope = self._muted_label(self.tab_addresses, text='')
+        self.lbl_addr_scope.pack(anchor=tk.W, pady=(0, 4))
+        self._load_addresses()
+
+    def _on_address_book_wallet_scope_changed(self):
+        if hasattr(self, 'var_addr_all_wallets'):
+            self.settings['address_book_all_wallets'] = bool(self.var_addr_all_wallets.get())
+            save_settings(self.settings)
         self._load_addresses()
 
     def _load_addresses(self):
-        show_all = bool(self.var_addr_show_all.get()) if hasattr(self, 'var_addr_show_all') else False
-        self._address_entries = services.load_address_book_entries(all_networks=show_all)
+        show_all_nets = bool(self.var_addr_show_all.get()) if hasattr(self, 'var_addr_show_all') else False
+        all_wallets = bool(self.var_addr_all_wallets.get()) if hasattr(self, 'var_addr_all_wallets') else False
+        self._address_entries = services.load_address_book_entries(
+            all_networks=show_all_nets,
+            all_wallets=all_wallets,
+        )
+        if hasattr(self, 'lbl_addr_scope'):
+            wid, label = services.active_wallet_display()
+            if all_wallets:
+                self.lbl_addr_scope.configure(
+                    text=f'Showing all wallets in address book ({len(self._address_entries)} row(s)).',
+                )
+            else:
+                self.lbl_addr_scope.configure(
+                    text=f'Showing active wallet only: {label} ({wid}) — {len(self._address_entries)} row(s).',
+                )
         self._filter_addresses()
 
     def _sync_address_book(self):
@@ -2111,58 +2673,364 @@ class CosmosGuiApp(tk.Tk):
     def _build_osmosis_tab(self):
         ttk.Label(
             self.tab_osmosis,
-            text='Market — Osmosis DEX prices (Numia API). Top tokens by 24h volume.',
+            text=(
+                'Market — Osmosis DEX prices (Numia API). Top tokens by 24h volume. '
+                'Row tint reflects 24h % change. Click column headers to sort.'
+            ),
             wraplength=700,
         ).pack(anchor=tk.W, pady=(0, 8))
         toolbar = ttk.Frame(self.tab_osmosis)
         toolbar.pack(fill=tk.X)
-        ttk.Button(toolbar, text='Load DEX prices', command=self._load_osmosis).pack(side=tk.LEFT)
+        ttk.Label(toolbar, text='Search:').pack(side=tk.LEFT, padx=(0, 6))
+        self.var_osmo_search = tk.StringVar()
+        osmo_search = ttk.Entry(toolbar, textvariable=self.var_osmo_search, width=18)
+        osmo_search.pack(side=tk.LEFT, padx=(0, 10))
+        osmo_search.bind('<Return>', lambda _e: self._on_osmo_filter_changed())
+        self.var_osmo_search.trace_add('write', lambda *_a: self._on_osmo_filter_changed())
+        liq_scope = ttk.Frame(toolbar)
+        liq_scope.pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Label(liq_scope, text='Show:').pack(side=tk.LEFT)
+        self.var_market_liquidity_only = tk.BooleanVar(
+            value=bool(self.settings.get('market_liquidity_only', False)),
+        )
+        ttk.Radiobutton(
+            liq_scope,
+            text='All',
+            variable=self.var_market_liquidity_only,
+            value=False,
+            command=self._on_market_scope_changed,
+        ).pack(side=tk.LEFT, padx=(4, 0))
+        ttk.Radiobutton(
+            liq_scope,
+            text='Liquidity > 0',
+            variable=self.var_market_liquidity_only,
+            value=True,
+            command=self._on_market_scope_changed,
+        ).pack(side=tk.LEFT, padx=(4, 0))
+        ttk.Button(
+            toolbar,
+            text='Refresh',
+            command=lambda: self._load_osmosis(force=True),
+        ).pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(toolbar, text='Columns…', command=self._market_choose_columns).pack(side=tk.LEFT, padx=(0, 8))
+        self.var_market_auto = tk.BooleanVar(value=bool(self.settings.get('market_auto_refresh', False)))
+        ttk.Checkbutton(
+            toolbar,
+            text='Auto-refresh',
+            variable=self.var_market_auto,
+            command=self._on_market_auto_changed,
+        ).pack(side=tk.LEFT)
+        msec = max(30, min(86400, int(self.settings.get('market_auto_refresh_seconds', 3600))))
+        self.var_market_auto_sec = tk.StringVar(value=str(msec))
+        ttk.Label(toolbar, text='every').pack(side=tk.LEFT, padx=(8, 2))
+        self.spin_market_auto_sec = ttk.Spinbox(
+            toolbar,
+            from_=30,
+            to=86400,
+            width=7,
+            textvariable=self.var_market_auto_sec,
+        )
+        self.spin_market_auto_sec.pack(side=tk.LEFT, padx=(0, 2))
+        ttk.Label(toolbar, text='s').pack(side=tk.LEFT)
+        self.spin_market_auto_sec.bind('<FocusOut>', lambda _e: self._save_market_auto_interval())
+        self.spin_market_auto_sec.bind('<Return>', lambda _e: self._save_market_auto_interval())
         self._muted_label(
             toolbar,
-            text='  Click column headers to sort',
-        ).pack(side=tk.LEFT, padx=8)
+            text='  Search: symbol / denom / name. Columns… to show/hide. Click headers to sort.',
+            track=False,
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        limit_row = ttk.Frame(self.tab_osmosis)
+        limit_row.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(limit_row, text='Numia list:').pack(side=tk.LEFT, padx=(0, 8))
+        _m = self.settings.get('market_tokens_limit_mode', 'limit')
+        if _m not in ('all', 'limit'):
+            _m = 'limit'
+        self.var_market_tokens_mode = tk.StringVar(value=_m)
+        ttk.Radiobutton(
+            limit_row,
+            text='All rows (full API response)',
+            variable=self.var_market_tokens_mode,
+            value='all',
+            command=self._on_market_tokens_limit_changed,
+        ).pack(side=tk.LEFT)
+        ttk.Radiobutton(
+            limit_row,
+            text='Top N by 24h volume',
+            variable=self.var_market_tokens_mode,
+            value='limit',
+            command=self._on_market_tokens_limit_changed,
+        ).pack(side=tk.LEFT, padx=(10, 0))
+        ttk.Label(limit_row, text='N =').pack(side=tk.LEFT, padx=(12, 4))
+        _n = max(1, min(100_000, int(self.settings.get('market_tokens_limit_count', 500))))
+        self.var_market_tokens_limit_count = tk.StringVar(value=str(_n))
+        self.spin_market_tokens_limit = ttk.Spinbox(
+            limit_row,
+            from_=1,
+            to=100000,
+            width=8,
+            textvariable=self.var_market_tokens_limit_count,
+        )
+        self.spin_market_tokens_limit.pack(side=tk.LEFT)
+        self.spin_market_tokens_limit.bind('<FocusOut>', lambda _e: self._save_market_tokens_limit_count())
+        self.spin_market_tokens_limit.bind('<Return>', lambda _e: self._save_market_tokens_limit_count())
+        self._muted_label(
+            limit_row,
+            text='  Apply on Refresh. Full list may take longer.',
+            track=False,
+        ).pack(side=tk.LEFT, padx=(10, 0))
+        self._update_market_limit_spin_state()
 
         self._osmo_rows: list = []
-        self._osmo_sort_col = 'volume'
-        self._osmo_sort_reverse = True
-        self._osmo_heading_titles = {
-            'symbol': 'Symbol',
-            'denom': 'Denom',
-            'price': 'Price',
-            'liquidity': 'Liquidity',
-            'volume': 'Vol 24h',
-            'chg24': '24h %',
-            'chg7': '7d %',
-        }
+        from gui.market_view import (
+            MARKET_COLUMN_IDS,
+            MARKET_COLUMN_LAYOUT,
+            MARKET_COLUMN_TITLES,
+            normalize_sort_column,
+        )
 
-        cols = ('symbol', 'denom', 'price', 'liquidity', 'volume', 'chg24', 'chg7')
-        self.osmo_tree = ttk.Treeview(self.tab_osmosis, columns=cols, show='headings', height=20)
-        headers = [
-            ('symbol', 'Symbol', 72),
-            ('denom', 'Denom', 120),
-            ('price', 'Price', 88),
-            ('liquidity', 'Liquidity', 100),
-            ('volume', 'Vol 24h', 100),
-            ('chg24', '24h %', 72),
-            ('chg7', '7d %', 72),
-        ]
-        for col, title, width in headers:
+        self._osmo_heading_titles = dict(MARKET_COLUMN_TITLES)
+        self._osmo_sort_col = normalize_sort_column(self.settings.get('market_sort_column', 'volume'))
+        self._osmo_sort_reverse = bool(self.settings.get('market_sort_reverse', True))
+
+        cols = tuple(MARKET_COLUMN_IDS)
+        tree_frame = ttk.Frame(self.tab_osmosis)
+        tree_frame.pack(fill=tk.BOTH, expand=True, pady=8)
+        tree_frame.grid_rowconfigure(0, weight=1)
+        tree_frame.grid_columnconfigure(0, weight=1)
+        self.osmo_tree = ttk.Treeview(tree_frame, columns=cols, show='headings', height=20)
+        for col_id, _width, stretch in MARKET_COLUMN_LAYOUT:
             self.osmo_tree.heading(
-                col,
-                text=title,
-                command=lambda c=col: self._sort_osmo_column(c),
+                col_id,
+                text=MARKET_COLUMN_TITLES[col_id],
+                command=lambda c=col_id: self._sort_osmo_column(c),
             )
-            self.osmo_tree.column(col, width=width)
-        scroll = ttk.Scrollbar(self.tab_osmosis, orient=tk.VERTICAL, command=self.osmo_tree.yview)
-        self.osmo_tree.configure(yscrollcommand=scroll.set)
-        self.osmo_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
-        scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
+            self.osmo_tree.column(col_id, width=_width, stretch=stretch, minwidth=40)
+        vscroll = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.osmo_tree.yview)
+        hscroll = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.osmo_tree.xview)
+        self.osmo_tree.configure(yscrollcommand=vscroll.set, xscrollcommand=hscroll.set)
+        self.osmo_tree.grid(row=0, column=0, sticky='nsew')
+        vscroll.grid(row=0, column=1, sticky='ns')
+        hscroll.grid(row=1, column=0, sticky='ew')
+        self.osmo_tree.bind('<ButtonRelease-1>', self._on_osmo_tree_release)
+        from gui.market_colors import configure_market_change_tags
+
+        configure_market_change_tags(
+            self.osmo_tree,
+            bg=self.colors.bg,
+            fg=self.colors.fg,
+            success=self.colors.success,
+            error=self.colors.error,
+            muted=self.colors.muted,
+        )
+        self.lbl_osmo_status = self._muted_label(
+            self.tab_osmosis,
+            text='No cached data — click Refresh to load from Numia API.',
+        )
+        self.lbl_osmo_status.pack(anchor=tk.W, pady=(0, 4))
+        self._market_cached_at_iso: Optional[str] = None
+        self._apply_market_column_layout()
+        self._try_restore_market_cache()
+
+    def _market_visible_columns(self) -> list:
+        from gui.market_view import normalize_visible_columns
+
+        return normalize_visible_columns(self.settings.get('market_visible_columns'))
+
+    def _apply_market_column_layout(self):
+        if not hasattr(self, 'osmo_tree'):
+            return
+        from gui.market_view import MARKET_COLUMN_IDS, normalize_column_widths
+
+        self.osmo_tree['displaycolumns'] = self._market_visible_columns()
+        widths = normalize_column_widths(self.settings.get('market_column_widths'))
+        for col_id in MARKET_COLUMN_IDS:
+            self.osmo_tree.column(col_id, width=widths[col_id])
+
+    def _save_market_tree_layout(self):
+        if not hasattr(self, 'osmo_tree'):
+            return
+        from gui.market_view import MARKET_COLUMN_IDS
+
+        dc = self.osmo_tree['displaycolumns']
+        if dc and dc != '#all':
+            order = [c for c in dc if c in MARKET_COLUMN_IDS]
+            if order:
+                self.settings['market_visible_columns'] = order
+        widths = {}
+        for col_id in MARKET_COLUMN_IDS:
+            try:
+                widths[col_id] = int(self.osmo_tree.column(col_id, 'width'))
+            except (tk.TclError, TypeError, ValueError):
+                pass
+        if widths:
+            self.settings['market_column_widths'] = widths
+        self.settings['market_sort_column'] = self._osmo_sort_col
+        self.settings['market_sort_reverse'] = bool(self._osmo_sort_reverse)
+        save_settings(self.settings)
+
+    def _on_osmo_tree_release(self, event):
+        if not hasattr(self, 'osmo_tree'):
+            return
+        region = self.osmo_tree.identify_region(event.x, event.y)
+        if region in ('separator', 'heading'):
+            self._save_market_tree_layout()
+
+    def _market_choose_columns(self):
+        from gui.market_view import MARKET_COLUMN_IDS, MARKET_COLUMN_TITLES
+
+        dialog = tk.Toplevel(self)
+        dialog.title('Market columns')
+        dialog.transient(self)
+        dialog.grab_set()
+        ttk.Label(dialog, text='Show columns (at least one):').pack(anchor=tk.W, padx=12, pady=(12, 6))
+        vars_map: dict = {}
+        visible = set(self._market_visible_columns())
+        frame = ttk.Frame(dialog)
+        frame.pack(fill=tk.BOTH, expand=True, padx=12)
+        for col_id in MARKET_COLUMN_IDS:
+            var = tk.BooleanVar(value=col_id in visible)
+            vars_map[col_id] = var
+            ttk.Checkbutton(
+                frame,
+                text=MARKET_COLUMN_TITLES.get(col_id, col_id),
+                variable=var,
+            ).pack(anchor=tk.W)
+
+        def save():
+            prev_order = self._market_visible_columns()
+            chosen = [c for c in prev_order if vars_map[c].get()]
+            for col_id in MARKET_COLUMN_IDS:
+                if col_id not in chosen and vars_map[col_id].get():
+                    chosen.append(col_id)
+            if not chosen:
+                messagebox.showerror('Columns', 'Select at least one column.', parent=dialog)
+                return
+            self.settings['market_visible_columns'] = chosen
+            dialog.destroy()
+            self._apply_market_column_layout()
+            self._save_market_tree_layout()
+            self._render_osmo_table()
+
+        btn_row = ttk.Frame(dialog)
+        btn_row.pack(pady=12)
+        ttk.Button(btn_row, text='Apply', command=save).pack(side=tk.LEFT, padx=6)
+        ttk.Button(btn_row, text='Cancel', command=dialog.destroy).pack(side=tk.LEFT, padx=6)
+
+    def _market_disk_cache_key(self) -> str:
+        if self.settings.get('market_tokens_limit_mode', 'limit') == 'all':
+            return 'all'
+        try:
+            n = int(self.settings.get('market_tokens_limit_count', 500))
+        except (TypeError, ValueError):
+            n = 500
+        n = max(1, min(100_000, n))
+        return f'top_{n}'
+
+    def _market_fetch_limit_optional(self) -> Optional[int]:
+        if self.settings.get('market_tokens_limit_mode', 'limit') == 'all':
+            return None
+        try:
+            n = int(self.settings.get('market_tokens_limit_count', 500))
+        except (TypeError, ValueError):
+            n = 500
+        return max(1, min(100_000, n))
+
+    def _update_market_limit_spin_state(self):
+        if not hasattr(self, 'spin_market_tokens_limit'):
+            return
+        lim = self.var_market_tokens_mode.get() == 'limit'
+        self.spin_market_tokens_limit.configure(state='normal' if lim else 'disabled')
+
+    def _on_market_tokens_limit_changed(self):
+        mode = self.var_market_tokens_mode.get()
+        if mode not in ('all', 'limit'):
+            mode = 'limit'
+        self.settings['market_tokens_limit_mode'] = mode
+        self.var_market_tokens_mode.set(mode)
+        if mode == 'limit':
+            self._save_market_tokens_limit_count()
+        else:
+            save_settings(self.settings)
+        self._update_market_limit_spin_state()
+        if self._try_restore_market_cache():
+            return
+        self._osmo_rows = []
+        if hasattr(self, 'osmo_tree'):
+            self._render_osmo_table()
+        if hasattr(self, 'lbl_osmo_status'):
+            self.lbl_osmo_status.configure(
+                text='No cache for this list mode — click Refresh to load from Numia.',
+            )
+
+    def _save_market_tokens_limit_count(self):
+        if not hasattr(self, 'var_market_tokens_limit_count'):
+            return
+        try:
+            n = int(self.var_market_tokens_limit_count.get().strip())
+        except ValueError:
+            n = 500
+        n = max(1, min(100_000, n))
+        self.var_market_tokens_limit_count.set(str(n))
+        self.settings['market_tokens_limit_count'] = n
+        save_settings(self.settings)
+        if self.settings.get('market_tokens_limit_mode') == 'limit':
+            if self._try_restore_market_cache():
+                return
+            self._osmo_rows = []
+            if hasattr(self, 'osmo_tree'):
+                self._render_osmo_table()
+            if hasattr(self, 'lbl_osmo_status'):
+                self.lbl_osmo_status.configure(
+                    text='No cache for this N — click Refresh to load from Numia.',
+                )
+
+    def _osmo_liquidity_value(self, row: dict) -> float:
+        try:
+            return float(row.get('liquidity') or 0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _osmo_matches_search(self, row: dict, needle: str) -> bool:
+        needle = (needle or '').strip().lower()
+        if not needle:
+            return True
+        for key in ('symbol', 'denom', 'display', 'name'):
+            if needle in (row.get(key) or '').lower():
+                return True
+        return False
+
+    def _osmo_filtered_rows(self) -> list:
+        rows = list(self._osmo_rows)
+        liq_only = bool(self.var_market_liquidity_only.get()) if hasattr(self, 'var_market_liquidity_only') else False
+        if liq_only:
+            rows = [r for r in rows if self._osmo_liquidity_value(r) > 0]
+        needle = self.var_osmo_search.get() if hasattr(self, 'var_osmo_search') else ''
+        rows = [r for r in rows if self._osmo_matches_search(r, needle)]
+        return rows
+
+    def _on_osmo_filter_changed(self):
+        if self._osmo_rows:
+            self._render_osmo_table()
+
+    def _on_market_scope_changed(self):
+        if hasattr(self, 'var_market_liquidity_only'):
+            self.settings['market_liquidity_only'] = bool(self.var_market_liquidity_only.get())
+            save_settings(self.settings)
+        self._on_osmo_filter_changed()
 
     def _osmo_sort_key(self, row: dict, column: str):
         if column in ('symbol', 'denom'):
             return (row.get(column) or '').lower()
+        field = {
+            'price': 'price',
+            'liquidity': 'liquidity',
+            'volume': 'volume_24h',
+            'chg24': 'price_24h_change',
+            'chg7': 'price_7d_change',
+        }.get(column, column)
         try:
-            return float(row.get(column) or 0)
+            return float(row.get(field) or 0)
         except (TypeError, ValueError):
             return 0.0
 
@@ -2172,6 +3040,7 @@ class CosmosGuiApp(tk.Tk):
         else:
             self._osmo_sort_col = column
             self._osmo_sort_reverse = column not in ('symbol', 'denom')
+        self._save_market_tree_layout()
         self._render_osmo_table()
 
     def _update_osmo_headings(self):
@@ -2182,44 +3051,110 @@ class CosmosGuiApp(tk.Tk):
             self.osmo_tree.heading(col, text=base + arrow)
 
     def _render_osmo_table(self):
-        rows = list(self._osmo_rows)
+        from gui.market_colors import change_row_tag
+        from gui.market_view import market_row_display_values
+
+        rows = self._osmo_filtered_rows()
         rows.sort(key=lambda r: self._osmo_sort_key(r, self._osmo_sort_col), reverse=self._osmo_sort_reverse)
+        max_abs_24 = 1.0
+        for row in rows:
+            try:
+                max_abs_24 = max(max_abs_24, abs(float(row.get('price_24h_change') or 0)))
+            except (TypeError, ValueError):
+                pass
         for item in self.osmo_tree.get_children():
             self.osmo_tree.delete(item)
         for row in rows:
+            tag = change_row_tag(row.get('price_24h_change'), max_abs_24)
             self.osmo_tree.insert(
                 '',
                 tk.END,
-                values=(
-                    row.get('symbol', ''),
-                    row.get('denom', ''),
-                    row.get('price', ''),
-                    row.get('_liquidity_fmt', ''),
-                    row.get('_volume_fmt', ''),
-                    row.get('price_24h_change', ''),
-                    row.get('price_7d_change', ''),
-                ),
+                values=market_row_display_values(row),
+                tags=(tag,),
             )
         self._update_osmo_headings()
+        if hasattr(self, 'lbl_osmo_status'):
+            total = len(self._osmo_rows)
+            shown = len(rows)
+            parts = [f'Showing {shown} of {total} loaded row(s)']
+            lim = self._market_fetch_limit_optional()
+            if lim is None:
+                parts.append('Numia: all rows')
+            else:
+                parts.append(f'Numia: top {lim} by volume')
+            if getattr(self, '_market_cached_at_iso', None):
+                parts.append(f'cache {self._market_cached_at_iso}')
+            if self.var_market_liquidity_only.get():
+                parts.append('liquidity > 0')
+            sym = self.var_osmo_search.get().strip() if hasattr(self, 'var_osmo_search') else ''
+            if sym:
+                parts.append(f'search “{sym}”')
+            self.lbl_osmo_status.configure(text=' · '.join(parts))
 
-    def _load_osmosis(self):
+    def _market_auto_refresh_seconds(self) -> int:
+        if hasattr(self, 'var_market_auto_sec'):
+            return self._clamp_tab_refresh_seconds(self.var_market_auto_sec.get())
+        return self._clamp_tab_refresh_seconds(self.settings.get('market_auto_refresh_seconds', 3600))
+
+    def _save_market_auto_interval(self):
+        if not hasattr(self, 'var_market_auto_sec'):
+            return
+        sec = self._market_auto_refresh_seconds()
+        self.settings['market_auto_refresh_seconds'] = sec
+        self.var_market_auto_sec.set(str(sec))
+        save_settings(self.settings)
+
+    def _on_market_auto_changed(self):
+        self.settings['market_auto_refresh'] = bool(self.var_market_auto.get())
+        if hasattr(self, 'var_market_auto_sec'):
+            self.settings['market_auto_refresh_seconds'] = self._market_auto_refresh_seconds()
+        save_settings(self.settings)
+
+    def _market_cache_stale(self) -> bool:
+        env = services.load_market_tab_cache(self._market_disk_cache_key())
+        if not env:
+            return True
+        sec = self._market_auto_refresh_seconds()
+        age = time.time() - float(env.get('cached_at', 0))
+        return age > sec
+
+    def _maybe_auto_refresh_market(self):
+        if not self.settings.get('market_auto_refresh'):
+            return
+        if self._market_cache_stale():
+            self._load_osmosis(force=True)
+
+    def _apply_market_rows(self, rows: list, cached_at_iso: Optional[str] = None):
+        self._osmo_rows = services.prepare_market_rows(rows)
+        self._market_cached_at_iso = cached_at_iso
+        self._render_osmo_table()
+
+    def _try_restore_market_cache(self) -> bool:
+        env = services.load_market_tab_cache(self._market_disk_cache_key())
+        if not env:
+            return False
+        payload = env.get('payload') or {}
+        self._apply_market_rows(payload.get('rows', []), env.get('cached_at_iso'))
+        return True
+
+    def _load_osmosis(self, force: bool = False):
+        if not force and self._try_restore_market_cache():
+            return
+
+        def worker():
+            lim = self._market_fetch_limit_optional()
+            return services.fetch_osmosis_tokens(limit=lim)
+
         def on_success(rows):
-            prepared = []
-            for row in rows:
-                item = dict(row)
-                liq = item.get('liquidity')
-                vol = item.get('volume_24h')
-                item['_liquidity_fmt'] = (
-                    f'{float(liq):,.0f}' if liq not in ('', None) else ''
-                )
-                item['_volume_fmt'] = (
-                    f'{float(vol):,.0f}' if vol not in ('', None) else ''
-                )
-                prepared.append(item)
-            self._osmo_rows = prepared
-            self._render_osmo_table()
+            prepared = services.prepare_market_rows(rows)
+            services.save_market_tab_cache(prepared, self._market_disk_cache_key())
+            env = services.load_market_tab_cache(self._market_disk_cache_key())
+            cached_iso = env.get('cached_at_iso') if env else None
+            self._apply_market_rows(prepared, cached_iso)
+            if hasattr(self, 'lbl_osmo_status'):
+                self.log('Market refreshed: ' + self.lbl_osmo_status.cget('text'))
 
-        self._run_async('Osmosis DEX', services.fetch_osmosis_tokens, on_success=on_success)
+        self._run_async('Osmosis DEX', worker, on_success=on_success)
 
     def _build_setup_tab(self):
         outer = ttk.Frame(self.tab_setup)
@@ -2413,7 +3348,7 @@ class CosmosGuiApp(tk.Tk):
         self.var_auto_balance = tk.BooleanVar(value=bool(self.settings.get('auto_refresh_balances', True)))
         ttk.Checkbutton(
             wallet,
-            text='Auto-refresh balances (Portfolio, Send, Assets)',
+            text='Auto-refresh balances (Portfolio, Send)',
             variable=self.var_auto_balance,
             command=self._on_wallet_settings_changed,
         ).pack(anchor=tk.W, pady=(8, 0))
@@ -2436,6 +3371,22 @@ class CosmosGuiApp(tk.Tk):
         spin.pack(side=tk.LEFT, padx=8)
         spin.bind('<FocusOut>', lambda _e: self._on_wallet_settings_changed())
         spin.bind('<Return>', lambda _e: self._on_wallet_settings_changed())
+
+        cache_row = ttk.Frame(wallet)
+        cache_row.pack(anchor=tk.W, pady=6)
+        ttk.Label(cache_row, text='Balance cache (seconds):').pack(side=tk.LEFT)
+        self.var_balance_cache = tk.StringVar(
+            value=str(int(self.settings.get('balance_cache_seconds', 30))),
+        )
+        cache_spin = ttk.Spinbox(cache_row, from_=0, to=600, width=8, textvariable=self.var_balance_cache)
+        cache_spin.pack(side=tk.LEFT, padx=8)
+        cache_spin.bind('<FocusOut>', lambda _e: self._on_wallet_settings_changed())
+        cache_spin.bind('<Return>', lambda _e: self._on_wallet_settings_changed())
+        self._muted_label(
+            cache_row,
+            text='0 = always query chain; reuse snapshot for Send token list and balance labels.',
+            track=False,
+        ).pack(side=tk.LEFT, padx=(8, 0))
 
         self._muted_label(
             wallet,
@@ -2483,6 +3434,13 @@ class CosmosGuiApp(tk.Tk):
         except ValueError:
             seconds = 60
         self.settings['balance_refresh_seconds'] = max(15, min(600, seconds))
+        try:
+            cache_sec = int(self.var_balance_cache.get().strip())
+        except ValueError:
+            cache_sec = 30
+        self.settings['balance_cache_seconds'] = max(0, min(600, cache_sec))
+        if hasattr(self, 'var_balance_cache'):
+            self.var_balance_cache.set(str(int(self.settings['balance_cache_seconds'])))
         if hasattr(self, 'var_settings_send_token_list'):
             self.settings['send_token_list_mode'] = self.var_settings_send_token_list.get()
             if hasattr(self, 'var_send_token_list'):

@@ -117,7 +117,6 @@ python3 gui_crypto.py
 | Send | IBC transfer (routes, preview, time/block timeout, gas) |
 | Receive | Deposit addresses per enabled network |
 | History | Transfer attempt log |
-| Assets | Per-network balance details |
 | Networks | Enable/disable chains, REST health |
 | Tokens | chain-registry asset list (+ Osmosis prices when available) |
 | Denoms | Edit `addresses/denoms/denoms_book.json` (symbol ↔ on-chain denom) |

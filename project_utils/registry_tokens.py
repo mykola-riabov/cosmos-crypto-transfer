@@ -11,7 +11,7 @@ import requests
 from config.config_links import LinksAPIChain
 from config.config_path_files import PathFileName
 
-_osmosis_cache: Optional[Dict[str, dict]] = None
+_OSMOSIS_CACHE_TTL = 600.0
 
 
 def assets_registry_path() -> str:
@@ -40,9 +40,17 @@ def chains_with_tokens(path: Optional[str] = None) -> List[str]:
 def fetch_osmosis_market_index(
     api_url: Optional[str] = None,
     timeout: float = 45.0,
+    *,
+    force: bool = False,
 ) -> Dict[str, dict]:
-    global _osmosis_cache
+    from project_utils.data_cache import get_cache
+
     url = api_url or LinksAPIChain.link_osmosis_token
+    cache = get_cache('osmosis_market', default_ttl=_OSMOSIS_CACHE_TTL)
+    if not force:
+        cached = cache.get(url)
+        if cached is not None:
+            return cached
     response = requests.get(url, timeout=timeout)
     response.raise_for_status()
     data = response.json()
@@ -61,8 +69,9 @@ def fetch_osmosis_market_index(
         symbol = (item.get('symbol') or '').upper()
         if symbol:
             by_symbol[symbol] = item
-    _osmosis_cache = {'by_denom': by_denom, 'by_display': by_display, 'by_symbol': by_symbol}
-    return _osmosis_cache
+    index = {'by_denom': by_denom, 'by_display': by_display, 'by_symbol': by_symbol}
+    cache.set(url, index, ttl=_OSMOSIS_CACHE_TTL)
+    return index
 
 
 def match_osmosis_price(token: dict, market: Dict[str, dict]) -> Optional[dict]:
@@ -101,8 +110,20 @@ def enrich_with_osmosis_prices(
     return rows
 
 
+def _token_matches_symbol_filter(token: dict, symbol_filter: str) -> bool:
+    """Match symbol / display / human name only (not denom or IBC hash)."""
+    needle = (symbol_filter or '').strip().lower()
+    if not needle:
+        return True
+    for key in ('symbol', 'display', 'name'):
+        if needle in (token.get(key) or '').lower():
+            return True
+    return False
+
+
 def token_display_rows(
     chain_name: Optional[str] = None,
+    symbol_filter: Optional[str] = None,
     search: Optional[str] = None,
     with_osmosis_prices: bool = True,
     limit: int = 5000,
@@ -111,15 +132,9 @@ def token_display_rows(
     meta = {'total': len(tokens), 'shown': 0, 'registry_loaded': bool(tokens)}
     if chain_name and chain_name.lower() not in ('all', ''):
         tokens = [t for t in tokens if t.get('chain_name', '').lower() == chain_name.lower()]
-    needle = (search or '').strip().lower()
-    if needle:
-        def _hay(token: dict) -> str:
-            return ' '.join(
-                str(token.get(k, ''))
-                for k in ('chain_name', 'symbol', 'display', 'name', 'denom', 'contract')
-            ).lower()
-
-        tokens = [t for t in tokens if needle in _hay(t)]
+    sym = (symbol_filter if symbol_filter is not None else search) or ''
+    if sym.strip():
+        tokens = [t for t in tokens if _token_matches_symbol_filter(t, sym)]
     if with_osmosis_prices and tokens:
         try:
             market = fetch_osmosis_market_index()

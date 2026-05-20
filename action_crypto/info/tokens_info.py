@@ -7,8 +7,14 @@ import requests
 from tabulate import tabulate
 
 
-def fetch_osmosis_token_rows(api_url, display_values=None, sort_by='volume_24h', limit=None):
-    response = requests.get(api_url, timeout=45)
+def fetch_osmosis_token_rows(
+    api_url,
+    display_values=None,
+    sort_by='volume_24h',
+    limit=None,
+    timeout=45.0,
+):
+    response = requests.get(api_url, timeout=timeout)
     response.raise_for_status()
     data = json.loads(response.text)
     if not isinstance(data, list):

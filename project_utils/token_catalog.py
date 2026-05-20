@@ -17,6 +17,25 @@ def _norm_network(network: str) -> str:
     return (network or '').strip().lower()
 
 
+# Well-known tickers when registry row exists only on another chain (IBC holdings).
+_SYMBOL_COINGECKO_FALLBACK: Dict[str, str] = {
+    'osmo': 'osmosis',
+    'atom': 'cosmos',
+    'akt': 'akash-network',
+    'juno': 'juno-network',
+    'scrt': 'secret',
+    'kuji': 'kujira',
+    'inj': 'injective-protocol',
+    'tia': 'celestia',
+    'dydx': 'dydx-chain',
+    'stars': 'stargaze',
+    'axl': 'axelar',
+    'bld': 'agoric',
+    'usdc': 'usd-coin',
+    'usdt': 'tether',
+}
+
+
 def _norm_denom(denom: str) -> str:
     from project_utils.ibc_denom_resolver import normalize_ibc_denom
 
@@ -156,10 +175,28 @@ class TokenCatalog:
         return self._by_network_denom.get((_norm_network(network), _norm_denom(denom)))
 
     def get_coingecko_id(self, network: str, denom: str) -> Optional[str]:
+        return self.resolve_coingecko_id(network, denom)
+
+    def resolve_coingecko_id(self, network: str, denom: str) -> Optional[str]:
+        """CoinGecko id for fiat pricing (same symbol on other chains, e.g. IBC OSMO on Agoric)."""
+        self.ensure_loaded()
         row = self.get_row(network, denom)
-        if not row:
+        if row and row.get('coingecko_id'):
+            return row['coingecko_id']
+        symbol = ''
+        if row:
+            symbol = (row.get('symbol') or '').strip().lower()
+        if not symbol or symbol.startswith('ibc'):
+            symbol = self.label_for_denom(network, denom).strip().lower()
+        if not symbol or symbol.startswith('ibc'):
             return None
-        return row.get('coingecko_id')
+        for other_row in self._by_network_denom.values():
+            if (other_row.get('symbol') or '').lower() != symbol:
+                continue
+            cg = other_row.get('coingecko_id')
+            if cg:
+                return cg
+        return _SYMBOL_COINGECKO_FALLBACK.get(symbol)
 
     def register_ibc_resolution(
         self,

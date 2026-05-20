@@ -32,7 +32,7 @@ def balance_rows_to_assets(
                 catalog.ensure_ibc_denom_resolved(network, denom, rest)
         symbol = catalog.label_for_denom(network, denom)
         amount_h = catalog.format_amount(row.amount, network, denom)
-        cg_id = catalog.get_coingecko_id(network, denom)
+        cg_id = catalog.resolve_coingecko_id(network, denom)
 
         usd_val = ''
         usd_note = usd_prices.get(cg_id) if cg_id else None

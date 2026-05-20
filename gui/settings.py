@@ -15,9 +15,33 @@ DEFAULT_SETTINGS: Dict[str, Any] = {
     'ledger_link_type': 'keplr_rest_link',
     'auto_refresh_balances': True,
     'balance_refresh_seconds': 60,
+    # Reuse on-chain balance snapshot for Portfolio / Send (seconds); 0 = always fetch
+    'balance_cache_seconds': 30,
     'show_fiat_prices': True,
     # Send: 'nonzero' = tokens with balance on source; 'all' = full catalog
     'send_token_list_mode': 'nonzero',
+    # Address book: show every wallet in file vs active wallet only
+    'address_book_all_wallets': False,
+    # Receive tab: same scope (active wallet vs all wallets in address book)
+    'receive_all_wallets': False,
+    'history_visible_columns': None,
+    'history_status_filter': None,
+    # Market tab: subset of column ids (order = display order); None = all default order
+    'market_visible_columns': None,
+    'market_sort_column': 'volume',
+    'market_sort_reverse': True,
+    # Market: {column_id: width_px}; None = defaults from MARKET_COLUMN_LAYOUT
+    'market_column_widths': None,
+    # Market: False = all loaded rows; True = only liquidity > 0
+    'market_liquidity_only': False,
+    'tokens_auto_refresh': False,
+    'market_auto_refresh': False,
+    # Auto-refresh interval when enabled (seconds); min 30, max 86400
+    'tokens_auto_refresh_seconds': 3600,
+    'market_auto_refresh_seconds': 3600,
+    # Market Numia rows: 'all' = full sorted list; 'limit' = top N by 24h volume
+    'market_tokens_limit_mode': 'limit',
+    'market_tokens_limit_count': 500,
 }
 
 
@@ -43,6 +67,24 @@ def load_settings() -> Dict[str, Any]:
             base = default_custom_colors()
             base.update(merged['custom_colors'])
             merged['custom_colors'] = base
+        # Migrate legacy minute-based intervals (only if seconds absent in file)
+        if isinstance(data, dict):
+            if 'tokens_auto_refresh_seconds' not in data and 'tokens_auto_refresh_minutes' in data:
+                try:
+                    merged['tokens_auto_refresh_seconds'] = max(
+                        30,
+                        min(86400, int(data['tokens_auto_refresh_minutes']) * 60),
+                    )
+                except (TypeError, ValueError):
+                    pass
+            if 'market_auto_refresh_seconds' not in data and 'market_auto_refresh_minutes' in data:
+                try:
+                    merged['market_auto_refresh_seconds'] = max(
+                        30,
+                        min(86400, int(data['market_auto_refresh_minutes']) * 60),
+                    )
+                except (TypeError, ValueError):
+                    pass
         return merged
     except (OSError, json.JSONDecodeError, TypeError):
         return copy.deepcopy(DEFAULT_SETTINGS)

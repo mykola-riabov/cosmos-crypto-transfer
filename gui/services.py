@@ -72,6 +72,124 @@ def get_paths() -> PathFileName:
     return PathFileName()
 
 
+def active_wallet_display() -> tuple[str, str]:
+    """(wallet_id, display label) for Portfolio header."""
+    from project_utils.wallet_profiles import get_active_wallet_id, get_active_wallet_label
+
+    wid = get_active_wallet_id()
+    return wid, get_active_wallet_label()
+
+
+def apply_wallet_switch_refresh() -> None:
+    """Reload derived addresses and UI-facing data after wallet create/switch."""
+    import importlib
+
+    from project_utils.token_catalog import invalidate_token_catalog
+    from project_utils.wallet_derivation import clear_wallet_cache
+
+    clear_wallet_cache()
+    invalidate_balance_cache()
+    paths = get_paths()
+    if os.path.isfile(paths.data_cosmos_file_name):
+        from project_utils.create_check_data.generate.create_wallets import create_wallets_list_code
+
+        create_wallets_list_code(
+            paths.data_cosmos_file_name,
+            paths.wallets_list_path,
+            enabled_networks=get_wallet_networks(),
+        )
+        import chain.wallets.wallets_list as wallets_list_module
+
+        importlib.reload(wallets_list_module)
+    sync_wallet_artifacts_for_enabled_networks(update_address_book=True)
+    invalidate_token_catalog()
+
+
+def activate_wallet(wallet_id: str) -> str:
+    from project_utils.wallet_ids import normalize_wallet_id
+    from project_utils.wallet_profiles import set_active_wallet
+
+    wid = normalize_wallet_id(wallet_id)
+    set_active_wallet(wid)
+    apply_wallet_switch_refresh()
+    return wid
+
+
+def create_new_wallet(
+    label: str | None,
+    secret: str,
+    *,
+    key_type: str | None = None,
+    master_password: str | None = None,
+    write_password_file: bool = True,
+    create_vault: bool = False,
+) -> str:
+    """Store mnemonic or private key in vault, create profile, refresh addresses. Returns wN."""
+    from chain.wallets.secret_vault import (
+        get_status,
+        store_mnemonic,
+        store_private_key,
+        store_wallet_secret,
+    )
+    from project_utils.wallet_mnemonic import normalize_secret_input
+    from project_utils.wallet_profiles import create_wallet, next_wallet_id
+
+    if key_type:
+        secret_value = secret.strip()
+        if key_type == 'mnemonic':
+            from project_utils.wallet_mnemonic import validate_mnemonic
+
+            validate_mnemonic(secret_value)
+        else:
+            from project_utils.wallet_mnemonic import parse_private_key_hex
+
+            parse_private_key_hex(secret_value)
+    else:
+        key_type, secret_value = normalize_secret_input(secret)
+
+    status = get_status()
+    wallet_id = next_wallet_id()
+
+    if create_vault or not status.vault_initialized:
+        if not master_password:
+            raise ValueError('Master password is required to create the vault.')
+        if key_type != 'mnemonic':
+            raise ValueError('The first wallet in a new vault must use a mnemonic.')
+        store_wallet_secret(
+            wallet_id,
+            'mnemonic',
+            secret_value,
+            master_password=master_password,
+            write_password_file=write_password_file,
+            create_vault=True,
+            overwrite=not status.vault_initialized,
+        )
+    elif key_type == 'mnemonic':
+        store_mnemonic(wallet_id, secret_value)
+    else:
+        store_private_key(wallet_id, secret_value)
+
+    create_wallet(label, wallet_id=wallet_id, key_type=key_type)
+    activate_wallet(wallet_id)
+    return wallet_id
+
+
+def delete_wallet_full(wallet_id: str) -> None:
+    """Remove profile, vault secrets, and rebuild address book."""
+    from chain.wallets.secret_vault import delete_wallet_secrets, has_wallet_secret
+    from project_utils.wallet_ids import normalize_wallet_id
+    from project_utils.wallet_profiles import delete_wallet, get_active_wallet_id
+
+    wid = normalize_wallet_id(wallet_id)
+    if has_wallet_secret(wid):
+        delete_wallet_secrets(wid)
+    delete_wallet(wid)
+    if get_active_wallet_id() == wid:
+        apply_wallet_switch_refresh()
+    else:
+        sync_wallet_artifacts_for_enabled_networks(update_address_book=True)
+
+
 def mnemonic_configured() -> bool:
     from chain.wallets.get_creds import mnemonic_is_configured
 
@@ -112,17 +230,28 @@ def enabled_networks_config_path() -> str:
 def load_address_book_entries(
     networks: Optional[set] = None,
     all_networks: bool = False,
+    all_wallets: bool = True,
 ) -> List[dict]:
     paths = get_paths()
     if not os.path.isfile(paths.address_book):
         return []
     with open(paths.address_book, 'r', encoding='utf-8') as f:
         entries = json.load(f)
-    if all_networks:
-        return entries
-    if networks is None:
-        networks = get_wallet_networks()
-    return [e for e in entries if e.get('network') in networks]
+    if not all_networks:
+        if networks is None:
+            networks = get_wallet_networks()
+        entries = [e for e in entries if e.get('network') in networks]
+    if not all_wallets:
+        from project_utils.wallet_ids import wallet_id_from_book_name
+        from project_utils.wallet_profiles import get_active_wallet_id
+
+        active = get_active_wallet_id()
+        entries = [
+            e
+            for e in entries
+            if wallet_id_from_book_name(e.get('name', '')) == active
+        ]
+    return entries
 
 
 def _format_token_choice_display(symbol: str, denom: str) -> str:
@@ -329,9 +458,12 @@ def chain_rest_urls() -> dict:
 def fetch_portfolio_assets(with_fiat: bool = True):
     from gui.wallet_views import balance_rows_to_assets
     from project_utils.token_catalog import get_token_catalog
+    from project_utils.wallet_profiles import row_belongs_to_active_wallet
 
     rows, missed = fetch_balances()
+    rows = [r for r in rows if row_belongs_to_active_wallet(r.wallet_name)]
     catalog = get_token_catalog()
+    chain_rest = chain_rest_urls()
     usd_prices = {}
     if with_fiat:
         from gui.settings import load_settings
@@ -340,17 +472,22 @@ def fetch_portfolio_assets(with_fiat: bool = True):
         if load_settings().get('show_fiat_prices', True):
             ids = set()
             for row in rows:
-                if row.denom and not row.error:
-                    cg = catalog.get_coingecko_id(row.network, row.denom)
-                    if cg:
-                        ids.add(cg)
+                if not row.denom or row.error:
+                    continue
+                if row.denom.lower().startswith('ibc/'):
+                    rest = chain_rest.get(row.network)
+                    if rest:
+                        catalog.ensure_ibc_denom_resolved(row.network, row.denom, rest)
+                cg = catalog.resolve_coingecko_id(row.network, row.denom)
+                if cg:
+                    ids.add(cg)
             usd_prices = fetch_usd_prices(ids)
 
     assets = balance_rows_to_assets(
         rows,
         catalog=catalog,
         usd_prices=usd_prices,
-        chain_rest_by_network=chain_rest_urls(),
+        chain_rest_by_network=chain_rest,
     )
     total_usd = 0.0
     for asset in assets:
@@ -361,6 +498,77 @@ def fetch_portfolio_assets(with_fiat: bool = True):
             except ValueError:
                 pass
     return assets, missed, total_usd, rows
+
+
+def balance_cache_ttl_seconds() -> float:
+    from gui.settings import load_settings
+
+    raw = load_settings().get('balance_cache_seconds', 30)
+    try:
+        ttl = float(raw)
+    except (TypeError, ValueError):
+        ttl = 30.0
+    return max(0.0, min(600.0, ttl))
+
+
+def invalidate_balance_cache() -> None:
+    from project_utils.data_cache import get_cache
+
+    get_cache('balances').clear()
+
+
+def _balance_cache_key() -> tuple:
+    from project_utils.wallet_profiles import get_active_wallet_id
+
+    enabled = frozenset(get_wallet_networks())
+    return (get_active_wallet_id(), enabled)
+
+
+def _symbol_balance_from_rows(
+    rows: List,
+    network: str,
+    symbol: str,
+    catalog,
+) -> Optional['BalanceRow']:
+    from action_crypto.bank.balance_query import BalanceRow
+
+    network = (network or '').strip()
+    symbol = (symbol or '').strip()
+    if not network or not symbol:
+        return None
+
+    wallet_name = ''
+    address = ''
+    for row in rows:
+        if getattr(row, 'network', None) == network:
+            wallet_name = getattr(row, 'wallet_name', '')
+            address = getattr(row, 'address', '')
+            if getattr(row, 'error', None):
+                return row
+            break
+    if not address:
+        return None
+
+    try:
+        target_denom, _decimals = catalog.resolve_denom(network, symbol)
+    except ValueError as exc:
+        return BalanceRow(wallet_name, network, address, '', '', error=str(exc))
+
+    sym_lower = symbol.lower()
+    match: Optional[BalanceRow] = None
+    for row in rows:
+        if getattr(row, 'network', None) != network:
+            continue
+        if getattr(row, 'error', None):
+            return row
+        denom = getattr(row, 'denom', '')
+        if denom == target_denom:
+            return row
+        if catalog.label_for_denom(network, denom).lower() == sym_lower:
+            match = row
+    if match is not None:
+        return match
+    return BalanceRow(wallet_name, network, address, target_denom, '0')
 
 
 def get_transfer_side_balances(source: str, dest: str, symbol: str) -> dict:
@@ -400,22 +608,27 @@ def get_transfer_side_balances(source: str, dest: str, symbol: str) -> dict:
                 max_human = 0.0
         return f'{label}: {display}', max_human
 
-    sender_row = query_symbol_balance_on_network(
-        source,
-        symbol,
-        paths.ledger_client_mapping,
-        paths.address_book,
-    )
-    sender_text, sender_max = _format_row(sender_row, f'From ({source})')
-
-    receiver_text = f'To ({dest}): —'
-    if dest:
-        receiver_row = query_symbol_balance_on_network(
-            dest,
+    cached_rows, _missed = fetch_balances()
+    sender_row = _symbol_balance_from_rows(cached_rows, source, symbol, catalog)
+    if sender_row is None:
+        sender_row = query_symbol_balance_on_network(
+            source,
             symbol,
             paths.ledger_client_mapping,
             paths.address_book,
         )
+    sender_text, sender_max = _format_row(sender_row, f'From ({source})')
+
+    receiver_text = f'To ({dest}): —'
+    if dest:
+        receiver_row = _symbol_balance_from_rows(cached_rows, dest, symbol, catalog)
+        if receiver_row is None:
+            receiver_row = query_symbol_balance_on_network(
+                dest,
+                symbol,
+                paths.ledger_client_mapping,
+                paths.address_book,
+            )
         receiver_text, _ = _format_row(receiver_row, f'To ({dest})')
 
     return {
@@ -596,6 +809,23 @@ def list_tx_history() -> List[dict]:
     return load_tx_history()
 
 
+def filtered_tx_history(
+    *,
+    date_from: str = '',
+    date_to: str = '',
+    statuses: Optional[set] = None,
+) -> List[dict]:
+    from gui.history_view import filter_tx_history, parse_filter_date
+
+    rows = list_tx_history()
+    try:
+        d_from = parse_filter_date(date_from) if date_from.strip() else None
+        d_to = parse_filter_date(date_to) if date_to.strip() else None
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+    return filter_tx_history(rows, date_from=d_from, date_to=d_to, statuses=statuses)
+
+
 def gui_broadcast_transfer(route, preview, gas_limit: Optional[int] = None) -> str:
     ledger_module = load_ledger_clients_module()
     wallets_module = load_wallets_module()
@@ -631,20 +861,46 @@ def gui_broadcast_transfer(route, preview, gas_limit: Optional[int] = None) -> s
         gas=limit,
         tx_hash=tx_hash,
     )
+    invalidate_balance_cache()
     return tx_hash
 
 
-def fetch_balances(networks: Optional[set] = None):
+def fetch_balances(networks: Optional[set] = None, *, force: bool = False):
+    """On-chain balances for enabled networks; cached snapshot shared across GUI tabs."""
     paths = get_paths()
     if not os.path.isfile(paths.ledger_client_mapping) or not os.path.isfile(paths.address_book):
         return [], []
+    enabled = frozenset(get_wallet_networks())
+    if not enabled:
+        return [], []
+
+    from project_utils.data_cache import get_cache
+
+    cache = get_cache('balances', default_ttl=balance_cache_ttl_seconds())
+    ttl = balance_cache_ttl_seconds()
+    use_cache = ttl > 0 and not force
+    cache_key = _balance_cache_key()
+
+    def _load():
+        return query_all_balances(
+            paths.ledger_client_mapping,
+            paths.address_book,
+            networks=set(enabled),
+        )
+
+    if use_cache:
+        snapshot, _from_cache = cache.get_or_fetch(cache_key, _load, ttl=ttl, force=force)
+    else:
+        snapshot = _load()
+        if ttl > 0:
+            cache.set(cache_key, snapshot, ttl=ttl)
+
+    all_rows, missed = snapshot
     if networks is None:
-        networks = get_wallet_networks()
-    return query_all_balances(
-        paths.ledger_client_mapping,
-        paths.address_book,
-        networks=networks,
-    )
+        return all_rows, missed
+    want = frozenset(networks)
+    filtered = [r for r in all_rows if getattr(r, 'network', None) in want]
+    return filtered, missed
 
 
 def summarize_wallet_balances(rows: List) -> List[dict]:
@@ -674,21 +930,29 @@ def summarize_wallet_balances(rows: List) -> List[dict]:
     return [by_network[n] for n in order]
 
 
-def fetch_osmosis_tokens(limit: int = 500):
+def fetch_osmosis_tokens(limit: Optional[int] = 500):
     links = LinksAPIChain()
-    return fetch_osmosis_token_rows(links.link_osmosis_token, display_values=None, limit=limit)
+    timeout = 180.0 if limit is None else (90.0 if (limit or 0) > 3000 else 60.0 if (limit or 0) > 1000 else 45.0)
+    return fetch_osmosis_token_rows(
+        links.link_osmosis_token,
+        display_values=None,
+        limit=limit,
+        timeout=timeout,
+    )
 
 
 def fetch_registry_token_rows(
     chain_name: Optional[str] = None,
+    symbol_filter: Optional[str] = None,
     search: Optional[str] = None,
     with_prices: bool = True,
 ):
     from project_utils.registry_tokens import token_display_rows
 
+    sym = symbol_filter if symbol_filter is not None else search
     return token_display_rows(
         chain_name=chain_name,
-        search=search,
+        symbol_filter=sym,
         with_osmosis_prices=with_prices,
     )
 
@@ -697,6 +961,56 @@ def registry_chains_with_tokens():
     from project_utils.registry_tokens import chains_with_tokens
 
     return chains_with_tokens()
+
+
+def tokens_tab_cache_key(chain_label: str) -> str:
+    chain = (chain_label or '').strip()
+    if not chain or chain.lower() == 'all':
+        return 'all'
+    return chain.lower().replace(' ', '_')
+
+
+def save_tokens_tab_cache(chain_label: str, rows: list, meta: dict) -> None:
+    from project_utils.tab_data_cache import save_tab_cache
+
+    save_tab_cache(
+        'tokens',
+        tokens_tab_cache_key(chain_label),
+        {'rows': rows, 'meta': meta},
+    )
+
+
+def load_tokens_tab_cache(chain_label: str) -> Optional[dict]:
+    from project_utils.tab_data_cache import load_tab_cache
+
+    return load_tab_cache('tokens', tokens_tab_cache_key(chain_label))
+
+
+def save_market_tab_cache(rows: list, cache_key: str = 'osmosis') -> None:
+    from project_utils.tab_data_cache import save_tab_cache
+
+    save_tab_cache('market', cache_key, {'rows': rows})
+
+
+def load_market_tab_cache(cache_key: str = 'osmosis') -> Optional[dict]:
+    from project_utils.tab_data_cache import load_tab_cache
+
+    env = load_tab_cache('market', cache_key)
+    if env is None and cache_key == 'top_500':
+        return load_tab_cache('market', 'osmosis')
+    return env
+
+
+def prepare_market_rows(rows: list) -> list:
+    prepared = []
+    for row in rows:
+        item = dict(row)
+        liq = item.get('liquidity')
+        vol = item.get('volume_24h')
+        item['_liquidity_fmt'] = f'{float(liq):,.0f}' if liq not in ('', None) else ''
+        item['_volume_fmt'] = f'{float(vol):,.0f}' if vol not in ('', None) else ''
+        prepared.append(item)
+    return prepared
 
 
 def run_setup_action(action_id: str, link_type: Optional[str] = None) -> str:

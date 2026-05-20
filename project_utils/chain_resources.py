@@ -31,9 +31,12 @@ def get_network_client(ledger_module: Any, network: str) -> Any:
 
 
 def get_wallet(wallets_module: Any, wallet_attr: str) -> Any:
-    wallet = getattr(wallets_module, wallet_attr, None)
+    from project_utils.wallet_derivation import resolve_wallet_attr
+
+    resolved = resolve_wallet_attr(wallet_attr)
+    wallet = getattr(wallets_module, resolved, None)
     if wallet is None:
-        raise AttributeError(f'{wallet_attr} not found in wallets_list')
+        raise AttributeError(f'{resolved} not found in wallets_list (from route {wallet_attr})')
     return wallet
 
 

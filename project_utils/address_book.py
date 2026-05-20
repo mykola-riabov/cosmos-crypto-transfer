@@ -1,5 +1,7 @@
 from typing import List, Tuple
 
+from project_utils.wallet_ids import canonical_book_name
+
 
 def resolve_wallets(
     data_address: List[dict],
@@ -12,14 +14,24 @@ def resolve_wallets(
     sender_address = None
     receiver_address = None
 
+    sender_canon = canonical_book_name(sender_key)
+    receiver_canon = canonical_book_name(receiver_key)
+
     for item in data_address:
-        name_wallet = item['name']
-        if name_wallet == sender_key:
+        name_wallet = (item.get('name') or '').strip()
+        if not name_wallet:
+            continue
+        item_canon = canonical_book_name(name_wallet)
+        if sender_name is None and (
+            name_wallet == sender_key or item_canon == sender_canon
+        ):
             sender_name = name_wallet
-            sender_address = item['address']
-        if name_wallet == receiver_key:
+            sender_address = item.get('address') or ''
+        if receiver_name is None and (
+            name_wallet == receiver_key or item_canon == receiver_canon
+        ):
             receiver_name = name_wallet
-            receiver_address = item['address']
+            receiver_address = item.get('address') or ''
 
     if sender_name is None or receiver_name is None:
         missing = []

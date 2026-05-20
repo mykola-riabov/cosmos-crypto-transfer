@@ -3,7 +3,13 @@ import os
 import tempfile
 import unittest
 from project_utils.create_check_data.collect_data.json.collect_assets import parse_asset
-from project_utils.registry_tokens import enrich_with_osmosis_prices, load_registry_tokens, match_osmosis_price
+from project_utils.registry_tokens import (
+    _token_matches_symbol_filter,
+    enrich_with_osmosis_prices,
+    load_registry_tokens,
+    match_osmosis_price,
+    token_display_rows,
+)
 
 
 class TestRegistryTokens(unittest.TestCase):
@@ -55,6 +61,42 @@ class TestRegistryTokens(unittest.TestCase):
         }
         matched = match_osmosis_price(token, market)
         self.assertEqual(matched['price'], 1.23)
+
+    def test_symbol_filter_matches_ticker_not_denom(self):
+        self.assertTrue(_token_matches_symbol_filter({'symbol': 'OSMO', 'display': 'osmo'}, 'osmo'))
+        self.assertFalse(
+            _token_matches_symbol_filter(
+                {'symbol': 'ATOM', 'denom': 'ibc/DEADBEEFOSMOHASH'},
+                'osmo',
+            )
+        )
+
+    def test_token_display_rows_symbol_filter(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, 'assets_registry.json')
+            payload = {
+                'tokens': [
+                    {'chain_name': 'osmosis', 'symbol': 'OSMO', 'display': 'osmo', 'denom': 'uosmo', 'decimals': 6},
+                    {'chain_name': 'cosmoshub', 'symbol': 'ATOM', 'display': 'atom', 'denom': 'uatom', 'decimals': 6},
+                ]
+            }
+            with open(path, 'w', encoding='utf-8') as f:
+                json.dump(payload, f)
+            import project_utils.registry_tokens as reg_mod
+
+            old_loader = reg_mod.load_registry_tokens
+            reg_mod.load_registry_tokens = lambda p=None: old_loader(path)
+            try:
+                rows, meta = token_display_rows(
+                    chain_name='osmosis',
+                    symbol_filter='osmo',
+                    with_osmosis_prices=False,
+                )
+            finally:
+                reg_mod.load_registry_tokens = old_loader
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]['symbol'], 'OSMO')
+            self.assertEqual(meta['shown'], 1)
 
     def test_enrich_with_prices(self):
         tokens = [{'chain_name': 'osmosis', 'denom': 'uosmo', 'display': 'osmo', 'symbol': 'OSMO'}]

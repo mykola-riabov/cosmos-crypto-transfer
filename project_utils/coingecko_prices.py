@@ -2,29 +2,32 @@
 
 from __future__ import annotations
 
-import time
-from typing import Dict, Optional, Set
+from typing import Dict, Set
 
 import requests
 
+from project_utils.data_cache import get_cache
+
 _COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price'
-_cache: Dict[str, float] = {}
-_cache_at: float = 0.0
 _CACHE_TTL = 300.0
 
 
 def fetch_usd_prices(coin_ids: Set[str], timeout: float = 20.0) -> Dict[str, float]:
-    global _cache_at
     ids = sorted({i for i in coin_ids if i})
     if not ids:
         return {}
-    if time.time() - _cache_at < _CACHE_TTL and all(i in _cache for i in ids):
-        return {i: _cache[i] for i in ids if i in _cache}
 
-    result: Dict[str, float] = {}
+    cache = get_cache('coingecko', default_ttl=_CACHE_TTL)
+    store: Dict[str, float] = cache.get('_all') or {}
+
+    missing = [i for i in ids if i not in store]
+    if not missing:
+        return {i: store[i] for i in ids if i in store}
+
+    result: Dict[str, float] = dict(store)
     chunk_size = 120
-    for offset in range(0, len(ids), chunk_size):
-        chunk = ids[offset : offset + chunk_size]
+    for offset in range(0, len(missing), chunk_size):
+        chunk = missing[offset : offset + chunk_size]
         params = {
             'ids': ','.join(chunk),
             'vs_currencies': 'usd',
@@ -39,6 +42,6 @@ def fetch_usd_prices(coin_ids: Set[str], timeout: float = 20.0) -> Dict[str, flo
             usd = row.get('usd')
             if usd is not None:
                 result[coin_id] = float(usd)
-                _cache[coin_id] = float(usd)
-    _cache_at = time.time()
-    return result
+
+    cache.set('_all', result, ttl=_CACHE_TTL)
+    return {i: result[i] for i in ids if i in result}

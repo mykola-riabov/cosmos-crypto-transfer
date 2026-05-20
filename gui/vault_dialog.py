@@ -107,7 +107,20 @@ def show_create_vault_dialog(parent) -> bool:
     def submit():
         try:
             mnemonic, master, write_pw = form.validate()
-            create_vault(mnemonic, master, write_password_file=write_pw, overwrite=True)
+            from project_utils.wallet_ids import DEFAULT_WALLET_ID
+
+            create_vault(
+                mnemonic,
+                master,
+                wallet_id=DEFAULT_WALLET_ID,
+                write_password_file=write_pw,
+                overwrite=True,
+            )
+            from project_utils.wallet_profiles import create_wallet, ensure_default_profile, load_profiles
+
+            ensure_default_profile()
+            if DEFAULT_WALLET_ID not in load_profiles()['profiles']:
+                create_wallet('Wallet 1', wallet_id=DEFAULT_WALLET_ID, key_type='mnemonic')
             result['ok'] = True
             messagebox.showinfo(
                 'Vault created',
