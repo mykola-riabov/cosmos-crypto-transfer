@@ -1,6 +1,6 @@
 # cosmos-crypto-transfer
 
-Cosmos wallet toolkit: **IBC transfers**, balances, address book, and token catalog. Available as a **desktop GUI** (tkinter) or **CLI** (`menu_crypto.py` / `cosmos_cli.py`).
+Cosmos wallet toolkit: **IBC transfers**, **Osmosis swaps** (Skip API routing + local signing), balances, address book, and token catalog. Available as a **desktop GUI** (tkinter) or **CLI** (`menu_crypto.py` / `cosmos_cli.py`).
 
 IBC transfers use a **time-based timeout** (default 120 seconds) instead of a block-height timeout, which is often better for arbitrage than typical wallets.
 
@@ -115,6 +115,7 @@ python3 gui_crypto.py
 |---------|---------|
 | Portfolio | Wallet overview; **Name token…** for unknown IBC denoms |
 | Send | IBC transfer (routes, preview, time/block timeout, gas) |
+| Swap | Osmosis same-chain swap: [Skip API](https://docs.skip.build/go/general/getting-started) quote/route, Cosmpy sign/broadcast |
 | Receive | Deposit addresses per enabled network |
 | History | Transfer attempt log |
 | Networks | Enable/disable chains, REST health |
@@ -129,6 +130,8 @@ python3 gui_crypto.py
 **Token symbols** for Send/Portfolio come from `addresses/denoms/denoms_book.json` (plus registry/Keplr data loaded into the catalog). Manual names and auto-resolved IBC denoms are stored in that file.
 
 GUI IBC sends use `prepare_ibc_transfer` / `broadcast_ibc_transfer` (no terminal prompts).
+
+**Swap (Osmosis):** Preview calls Skip `/v2/fungible/route` then `/v2/fungible/msgs`; the app builds `MsgExecuteContract` messages and signs with your vault wallet (same flow as Send). Requires Osmosis enabled and a funded address. Optional env: `SKIP_API_URL` (default `https://api.skip.build`). Only single-tx same-chain routes are supported in this version.
 
 Recommended flow under **“3. Check and create data”** (CLI) or the **Setup** tab (GUI):
 

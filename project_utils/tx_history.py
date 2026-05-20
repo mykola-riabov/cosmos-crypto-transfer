@@ -47,6 +47,7 @@ def append_tx_record(
     timeout_mode: str = 'time',
     timeout_value: str = '120',
     timeout_display: str = '',
+    tx_kind: str = 'ibc',
     path: Optional[str] = None,
 ) -> dict:
     path = path or tx_history_path()
@@ -67,6 +68,7 @@ def append_tx_record(
         'timeout_mode': timeout_mode,
         'timeout_value': str(timeout_value),
         'timeout_display': timeout_display,
+        'tx_kind': (tx_kind or 'ibc').strip().lower(),
     }
     entries = load_tx_history(path)
     if tx_hash and entries:

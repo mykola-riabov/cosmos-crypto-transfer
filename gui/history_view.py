@@ -35,7 +35,13 @@ def _timeout_display(row: dict) -> str:
 
 
 def _route_display(row: dict) -> str:
-    return f'{row.get("source", "")} → {row.get("destination", "")}'
+    route = f'{row.get("source", "")} → {row.get("destination", "")}'
+    kind = (row.get('tx_kind') or '').strip().lower()
+    if kind == 'swap':
+        return f'Swap · {route}'
+    if kind == 'ibc':
+        return f'IBC · {route}'
+    return route
 
 
 def column_specs() -> List[ColumnSpec]:

@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from gui.history_view import HISTORY_COLUMN_IDS, filter_tx_history, parse_filter_date, row_values
+from gui.history_view import HISTORY_COLUMN_IDS, _route_display, filter_tx_history, parse_filter_date, row_values
 
 
 class TestHistoryView(unittest.TestCase):
@@ -27,6 +27,10 @@ class TestHistoryView(unittest.TestCase):
     def test_empty_status_set_shows_nothing(self):
         rows = [{'time': '2026-05-19T10:00:00+00:00', 'status': 'success'}]
         self.assertEqual(filter_tx_history(rows, statuses=set()), [])
+
+    def test_route_display_swap(self):
+        row = {'tx_kind': 'swap', 'source': 'osmosis', 'destination': 'osmosis'}
+        self.assertEqual(_route_display(row), 'Swap · osmosis → osmosis')
 
     def test_row_values_full_column_order(self):
         row = {

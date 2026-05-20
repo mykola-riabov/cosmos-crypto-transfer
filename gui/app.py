@@ -21,12 +21,14 @@ from gui.theme import (
     theme_labels_map,
 )
 from gui.autocomplete import bind_searchable_combobox
+from gui.clipboard_util import copy_to_clipboard
 from gui.network_picker import NetworkListPicker
 from gui.vault_dialog import show_create_vault_dialog, show_edit_mnemonic_dialog
 
 NAV_LABELS = (
     'Portfolio',
     'Send',
+    'Swap',
     'Receive',
     'History',
     '—',
@@ -54,6 +56,8 @@ class CosmosGuiApp(tk.Tk):
         self._log_queue: queue.Queue = queue.Queue()
         self._main_callbacks: queue.Queue = queue.Queue()
         self._preview = None
+        self._swap_preview = None
+        self._tree_bulk_update = False
         self._current_route = None
         self._by_source = services.ibc_routes_grouped()
         self._muted_labels: list = []
@@ -71,6 +75,7 @@ class CosmosGuiApp(tk.Tk):
         style_text_widget(self.log_text, self.colors)
         self._build_portfolio_tab()
         self._build_transfer_tab()
+        self._build_swap_tab()
         self._build_receive_tab()
         self._build_history_tab()
         self._build_networks_tab()
@@ -137,6 +142,7 @@ class CosmosGuiApp(tk.Tk):
 
         self.tab_portfolio = ttk.Frame(self._page_stack, padding=12)
         self.tab_transfer = ttk.Frame(self._page_stack, padding=12)
+        self.tab_swap = ttk.Frame(self._page_stack, padding=12)
         self.tab_receive = ttk.Frame(self._page_stack, padding=12)
         self.tab_history = ttk.Frame(self._page_stack, padding=12)
         self.tab_networks = ttk.Frame(self._page_stack, padding=12)
@@ -151,6 +157,7 @@ class CosmosGuiApp(tk.Tk):
         self._page_by_label = {
             'Portfolio': self.tab_portfolio,
             'Send': self.tab_transfer,
+            'Swap': self.tab_swap,
             'Receive': self.tab_receive,
             'History': self.tab_history,
             'Networks': self.tab_networks,
@@ -335,28 +342,51 @@ class CosmosGuiApp(tk.Tk):
             self._muted_labels.append(label)
         return label
 
-    def _treeview_focus_item(self, tree) -> Optional[str]:
-        """Selected row, or focused row (focus survives toolbar button clicks on Linux)."""
+    def _treeview_focus_item(self, tree, *, last_item_attr: str = '') -> Optional[str]:
+        """Selected row, last remembered row, or focused row (for toolbar Copy on Linux)."""
         sel = tree.selection()
         if sel:
             return sel[0]
+        if last_item_attr:
+            remembered = getattr(self, last_item_attr, None)
+            if remembered and tree.exists(remembered):
+                return remembered
         focus = tree.focus()
         return focus if focus else None
 
-    def _copy_text_to_clipboard(self, text: str) -> None:
-        """Copy to CLIPBOARD; re-assert after idle so X11 keeps text after focus changes."""
-        self.clipboard_clear()
-        self.clipboard_append(text)
-        self.update_idletasks()
-
-        def _reassert():
+    def _remember_tree_row(self, tree, last_item_attr: str, event=None) -> None:
+        if getattr(self, '_tree_bulk_update', False):
+            return
+        item = None
+        if event is not None:
             try:
-                self.clipboard_clear()
-                self.clipboard_append(text)
+                item = tree.identify_row(event.y)
             except tk.TclError:
-                pass
+                item = None
+        if not item:
+            sel = tree.selection()
+            if sel:
+                item = sel[0]
+        if not item:
+            return
+        setattr(self, last_item_attr, item)
+        # Do not re-select on <<TreeviewSelect>> — selection_set() can recurse and freeze the UI.
+        if event is not None:
+            cur = tree.selection()
+            if not cur or cur[0] != item:
+                tree.selection_set(item)
+            if tree.focus() != item:
+                tree.focus(item)
 
-        self.after(100, _reassert)
+    def _treeview_column_value(self, tree, item: str, column_index: int) -> str:
+        values = tree.item(item, 'values')
+        if len(values) > column_index:
+            return str(values[column_index] or '').strip()
+        return ''
+
+    def _copy_text_to_clipboard(self, text: str) -> None:
+        if not copy_to_clipboard(self, text):
+            messagebox.showwarning('Clipboard', 'Could not copy to clipboard.')
 
     def _apply_theme(self, theme_name: Optional[str] = None) -> None:
         theme_name = theme_name or self.settings.get('theme', DEFAULT_THEME)
@@ -964,7 +994,16 @@ class CosmosGuiApp(tk.Tk):
         self.receive_tree.configure(yscrollcommand=scroll.set)
         self.receive_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
         scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
-        self.receive_tree.bind('<Double-1>', lambda _e: self._copy_receive_address())
+        self._receive_tree_last_item = None
+        self.receive_tree.bind('<<TreeviewSelect>>', lambda _e: self._remember_tree_row(
+            self.receive_tree, '_receive_tree_last_item',
+        ))
+        self.receive_tree.bind(
+            '<ButtonRelease-1>',
+            lambda e: self._remember_tree_row(self.receive_tree, '_receive_tree_last_item', e),
+        )
+        self.receive_tree.bind('<Double-1>', self._on_receive_double_click)
+        self.receive_tree.bind('<Control-c>', lambda _e: self._copy_receive_address())
 
         self._receive_entries = []
         self.lbl_receive_scope = self._muted_label(self.tab_receive, text='')
@@ -1000,29 +1039,41 @@ class CosmosGuiApp(tk.Tk):
         needle = ''
         if hasattr(self, 'var_receive_filter'):
             needle = self.var_receive_filter.get().strip().lower()
-        for item in self.receive_tree.get_children():
-            self.receive_tree.delete(item)
-        for entry in getattr(self, '_receive_entries', []):
+        rows = []
+        for idx, entry in enumerate(getattr(self, '_receive_entries', [])):
             hay = f'{entry.get("name", "")} {entry.get("network", "")} {entry.get("address", "")}'.lower()
             if needle and needle not in hay:
                 continue
             addr = entry.get('address', '')
             network = entry.get('network', '')
-            self.receive_tree.insert(
-                '',
-                tk.END,
-                iid=f'{network}:{addr}' if network and addr else None,
-                values=(network, entry.get('name', ''), addr),
-            )
+            rows.append((f'rcv-{idx}', (network, entry.get('name', ''), addr)))
+        self._tree_bulk_update = True
+        try:
+            children = self.receive_tree.get_children()
+            if children:
+                self.receive_tree.delete(*children)
+            for iid, values in rows:
+                self.receive_tree.insert('', tk.END, iid=iid, values=values)
+        finally:
+            self._tree_bulk_update = False
+
+    def _on_receive_double_click(self, event):
+        self._remember_tree_row(self.receive_tree, '_receive_tree_last_item', event)
+        self._copy_receive_address()
 
     def _copy_receive_address(self):
         if not hasattr(self, 'receive_tree'):
             return
-        item = self._treeview_focus_item(self.receive_tree)
+        item = self._treeview_focus_item(
+            self.receive_tree, last_item_attr='_receive_tree_last_item',
+        )
         if not item:
             messagebox.showinfo('Receive', 'Select an address row first.')
             return
-        address = self.receive_tree.item(item, 'values')[2]
+        address = self._treeview_column_value(self.receive_tree, item, 2)
+        if not address:
+            messagebox.showinfo('Receive', 'No address in this row.')
+            return
         self._copy_text_to_clipboard(address)
         self.log(f'Copied address: {address}')
 
@@ -1610,6 +1661,309 @@ class CosmosGuiApp(tk.Tk):
         self._preview = None
         self.btn_send.configure(state=tk.DISABLED)
 
+    def _build_swap_tab(self):
+        ttk.Label(self.tab_swap, text='Swap — Osmosis (Skip route)', font=('', 11, 'bold')).pack(
+            anchor=tk.W, pady=(0, 8),
+        )
+        self._muted_label(
+            self.tab_swap,
+            text=(
+                'Quotes and routing use the Skip API; your wallet signs and broadcasts via Cosmpy. '
+                'Osmosis must be enabled under Networks. Same-chain swaps only in this version.'
+            ),
+            wraplength=900,
+        ).pack(anchor=tk.W, pady=(0, 8))
+
+        form = ttk.Frame(self.tab_swap)
+        form.pack(fill=tk.X, anchor=tk.W)
+
+        self.var_swap_in = tk.StringVar(value='OSMO')
+        self.var_swap_out = tk.StringVar(value='USDC')
+        self.var_swap_amount = tk.StringVar(value='0.01')
+        self.var_swap_slippage = tk.StringVar(value='1.5')
+        self.var_swap_gas = tk.StringVar(value='1000000')
+        self.var_swap_auto_gas = tk.BooleanVar(value=True)
+        self.var_swap_split = tk.BooleanVar(value=False)
+        self._swap_max_amount = 0.0
+        self._swap_balance_fetch_in_progress = False
+
+        ttk.Label(form, text='Sell').grid(row=0, column=0, sticky=tk.W, padx=4, pady=4)
+        swap_in_row = ttk.Frame(form)
+        swap_in_row.grid(row=0, column=1, sticky=tk.W, padx=4, pady=4)
+        self.cmb_swap_in = ttk.Combobox(swap_in_row, textvariable=self.var_swap_in, width=40)
+        self.cmb_swap_in.pack(side=tk.LEFT)
+        ttk.Button(swap_in_row, text='⇄', width=3, command=self._swap_flip_tokens).pack(
+            side=tk.LEFT, padx=(8, 0),
+        )
+
+        ttk.Label(form, text='Buy').grid(row=1, column=0, sticky=tk.W, padx=4, pady=4)
+        self.cmb_swap_out = ttk.Combobox(form, textvariable=self.var_swap_out, width=40)
+        self.cmb_swap_out.grid(row=1, column=1, sticky=tk.W, padx=4, pady=4)
+
+        self.lbl_swap_balance = self._muted_label(form, text='Balance (sell token): —')
+        self.lbl_swap_balance.grid(row=2, column=1, sticky=tk.W, padx=4, pady=(0, 4))
+
+        ttk.Label(form, text='Amount').grid(row=3, column=0, sticky=tk.W, padx=4, pady=4)
+        amount_row = ttk.Frame(form)
+        amount_row.grid(row=3, column=1, sticky=tk.W, padx=4, pady=4)
+        ttk.Entry(amount_row, textvariable=self.var_swap_amount, width=22).pack(side=tk.LEFT)
+        ttk.Button(amount_row, text='Max', width=6, command=self._swap_fill_max_amount).pack(
+            side=tk.LEFT, padx=(6, 0),
+        )
+
+        ttk.Label(form, text='Slippage %').grid(row=4, column=0, sticky=tk.W, padx=4, pady=4)
+        ttk.Entry(form, textvariable=self.var_swap_slippage, width=8).grid(
+            row=4, column=1, sticky=tk.W, padx=4, pady=4,
+        )
+
+        gas_row = ttk.Frame(form)
+        gas_row.grid(row=5, column=0, columnspan=2, sticky=tk.W, padx=4, pady=4)
+        ttk.Label(gas_row, text='Gas limit').pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Entry(gas_row, textvariable=self.var_swap_gas, width=12).pack(side=tk.LEFT)
+        ttk.Checkbutton(
+            gas_row,
+            text='Auto (+35% buffer)',
+            variable=self.var_swap_auto_gas,
+            command=self._apply_swap_gas_defaults,
+        ).pack(side=tk.LEFT, padx=(10, 0))
+        ttk.Checkbutton(
+            gas_row,
+            text='Split routes (Skip)',
+            variable=self.var_swap_split,
+        ).pack(side=tk.LEFT, padx=(16, 0))
+
+        self.swap_route_info = ttk.Label(self.tab_swap, text='', wraplength=700)
+        self.swap_route_info.pack(anchor=tk.W, pady=8)
+
+        btn_row = ttk.Frame(self.tab_swap)
+        btn_row.pack(anchor=tk.W, pady=4)
+        ttk.Button(btn_row, text='Preview swap', command=self._preview_swap).pack(side=tk.LEFT, padx=(0, 8))
+        self.btn_swap_send = ttk.Button(
+            btn_row, text='Swap (after preview)', command=self._send_swap, state=tk.DISABLED,
+        )
+        self.btn_swap_send.pack(side=tk.LEFT)
+
+        def _swap_token_change():
+            self._refresh_swap_balance()
+            self._update_swap_route_hint()
+
+        self._refresh_swap_in_combobox = bind_searchable_combobox(
+            self.cmb_swap_in,
+            lambda: services.symbols_for_transfer_network('osmosis', 'nonzero'),
+            on_change=_swap_token_change,
+            textvariable=self.var_swap_in,
+        )
+        self._refresh_swap_out_combobox = bind_searchable_combobox(
+            self.cmb_swap_out,
+            lambda: services.symbols_for_transfer_network('osmosis', 'all'),
+            on_change=_swap_token_change,
+            textvariable=self.var_swap_out,
+        )
+        self._apply_swap_gas_defaults()
+        self._update_swap_route_hint()
+        self._refresh_swap_balance()
+
+    def _apply_swap_gas_defaults(self):
+        base = 1_000_000
+        if getattr(self, 'var_swap_auto_gas', None) and self.var_swap_auto_gas.get():
+            limit = services.recommended_gas_limit(base)
+            self.var_swap_gas.set(str(limit))
+        else:
+            self.var_swap_gas.set(str(base))
+
+    def _update_swap_route_hint(self):
+        if not hasattr(self, 'swap_route_info'):
+            return
+        sell = self.var_swap_in.get().strip() or '—'
+        buy = self.var_swap_out.get().strip() or '—'
+        self.swap_route_info.configure(
+            text=f'Osmosis swap: {sell} → {buy} · routing: Skip API · signer: active wallet',
+        )
+
+    def _swap_flip_tokens(self):
+        a, b = self.var_swap_in.get(), self.var_swap_out.get()
+        self.var_swap_in.set(b)
+        self.var_swap_out.set(a)
+        if hasattr(self, '_refresh_swap_in_combobox'):
+            self._refresh_swap_in_combobox()
+        self._swap_preview = None
+        self.btn_swap_send.configure(state=tk.DISABLED)
+        self._refresh_swap_balance()
+        self._update_swap_route_hint()
+
+    def _swap_fill_max_amount(self):
+        if self._swap_max_amount <= 0:
+            messagebox.showinfo('Swap', 'No spendable balance for the sell token on Osmosis.')
+            return
+        text = f'{self._swap_max_amount:.8f}'.rstrip('0').rstrip('.')
+        self.var_swap_amount.set(text or '0')
+
+    def _refresh_swap_balance(self):
+        if not hasattr(self, 'lbl_swap_balance'):
+            return
+        if self._swap_balance_fetch_in_progress:
+            return
+        raw = self.var_swap_in.get().strip()
+        if not raw:
+            self.lbl_swap_balance.configure(text='Balance (sell token): —')
+            self._swap_max_amount = 0.0
+            return
+        try:
+            sym = services.resolve_transfer_symbol('osmosis', raw, 'nonzero')
+        except ValueError:
+            sym = raw
+        self.lbl_swap_balance.configure(text=f'Balance ({sym} on Osmosis): loading…')
+        self._swap_balance_fetch_in_progress = True
+
+        def worker():
+            return services.get_transfer_side_balances('osmosis', 'osmosis', sym)
+
+        def on_success(data):
+            self._swap_balance_fetch_in_progress = False
+            self._swap_max_amount = float(data.get('sender_max') or 0)
+            self.lbl_swap_balance.configure(
+                text=data.get('sender_text', f'Balance ({sym}): —').replace('From (osmosis)', 'Balance'),
+            )
+
+        def on_error(exc):
+            self._swap_balance_fetch_in_progress = False
+            self._swap_max_amount = 0.0
+            self.lbl_swap_balance.configure(text=f'Balance: error ({exc})')
+
+        self._run_async('Swap balance', worker, on_success=on_success, on_error=on_error)
+
+    def _parse_swap_gas_limit(self) -> int:
+        try:
+            raw = int(self.var_swap_gas.get().strip())
+        except ValueError as exc:
+            raise ValueError('Gas limit must be an integer.') from exc
+        if raw <= 0:
+            raise ValueError('Gas limit must be positive.')
+        return raw
+
+    def _preview_swap(self):
+        try:
+            sym_in = services.resolve_transfer_symbol(
+                'osmosis', self.var_swap_in.get().strip(), 'nonzero',
+            )
+            sym_out = services.resolve_transfer_symbol(
+                'osmosis', self.var_swap_out.get().strip(), 'all',
+            )
+            amount = float(self.var_swap_amount.get().strip())
+            slippage = float(self.var_swap_slippage.get().strip())
+            gas_limit = self._parse_swap_gas_limit()
+        except ValueError as exc:
+            messagebox.showerror('Swap', str(exc))
+            return
+        if amount <= 0:
+            messagebox.showerror('Swap', 'Amount must be greater than zero.')
+            return
+        if slippage < 0 or slippage > 50:
+            messagebox.showerror('Swap', 'Slippage must be between 0 and 50%.')
+            return
+
+        def worker():
+            return services.gui_prepare_swap(
+                sym_in,
+                sym_out,
+                amount,
+                slippage_percent=slippage,
+                gas=gas_limit,
+                split_routes=self.var_swap_split.get(),
+            )
+
+        def on_success(preview):
+            self._swap_preview = preview
+            self._swap_gas_limit = gas_limit
+            self.btn_swap_send.configure(state=tk.NORMAL)
+            services.record_swap_tx(status='preview', preview=preview, gas=gas_limit)
+            self._refresh_history_table()
+            body = '\n'.join(preview.summary_lines()) + f'\nGas limit: {gas_limit:,}'
+            self.log('--- Swap preview ---\n' + body)
+            messagebox.showinfo('Swap preview', body)
+
+        def on_error(exc):
+            self._swap_preview = None
+            self.btn_swap_send.configure(state=tk.DISABLED)
+            services.record_swap_tx(
+                status='failed',
+                gas=gas_limit,
+                error=f'preview: {exc}',
+                symbol_in=sym_in,
+                symbol_out=sym_out,
+                amount=str(amount),
+            )
+            self._refresh_history_table()
+            messagebox.showerror('Preview failed', str(exc))
+
+        self._run_async('Swap preview', worker, on_success=on_success, on_error=on_error)
+
+    def _send_swap(self):
+        if self._swap_preview is None:
+            messagebox.showwarning('Swap', 'Run preview first.')
+            return
+        preview = self._swap_preview
+        try:
+            gas_limit = self._parse_swap_gas_limit()
+        except ValueError as exc:
+            messagebox.showerror('Swap', str(exc))
+            return
+
+        summary = '\n'.join(preview.summary_lines()) + f'\nGas limit: {gas_limit:,}'
+        dialog = tk.Toplevel(self)
+        dialog.title('Confirm swap')
+        dialog.transient(self)
+        dialog.grab_set()
+        ttk.Label(dialog, text=summary, justify=tk.LEFT).pack(padx=12, pady=12)
+        amount_display = self._format_amount_for_display(preview.amount_in_token)
+        confirm_var = tk.StringVar(value=amount_display)
+        ttk.Label(
+            dialog,
+            text=f'Confirm sell amount ({preview.symbol_in}, editable if needed):',
+        ).pack(anchor=tk.W, padx=12)
+        ttk.Entry(dialog, textvariable=confirm_var, width=24).pack(padx=12, pady=4)
+
+        def submit():
+            try:
+                if float(confirm_var.get().strip()) != float(preview.amount_in_token):
+                    messagebox.showerror('Swap', 'Amount mismatch. Cancelled.', parent=dialog)
+                    return
+            except ValueError:
+                messagebox.showerror('Swap', 'Invalid amount.', parent=dialog)
+                return
+            dialog.destroy()
+            services.record_swap_tx(status='submitted', preview=preview, gas=gas_limit)
+            self._refresh_history_table()
+
+            def on_fail(exc):
+                self._refresh_history_table()
+                messagebox.showerror('Swap failed', str(exc))
+
+            self._run_async(
+                'Swap',
+                lambda: services.gui_broadcast_swap(preview, gas_limit=gas_limit),
+                on_success=lambda tx_hash: self._swap_done(tx_hash, preview, gas_limit),
+                on_error=on_fail,
+            )
+
+        btn_frame = ttk.Frame(dialog)
+        btn_frame.pack(pady=8)
+        ttk.Button(btn_frame, text='Swap', command=submit).pack(side=tk.LEFT, padx=4)
+        ttk.Button(btn_frame, text='Cancel', command=dialog.destroy).pack(side=tk.LEFT, padx=4)
+
+    def _swap_done(self, tx_hash: str, preview, gas_limit: int):
+        self._refresh_history_table()
+        self._refresh_wallet_balances(quiet=True, force=True)
+        self.log(f'Swap tx hash: {tx_hash}')
+        messagebox.showinfo(
+            'Swap success',
+            f'Swap confirmed on chain.\n\nHash (copied to clipboard):\n{tx_hash}',
+        )
+        self.clipboard_clear()
+        self.clipboard_append(tx_hash)
+        self._swap_preview = None
+        self.btn_swap_send.configure(state=tk.DISABLED)
+
     def _history_visible_columns(self) -> list:
         from gui.history_view import HISTORY_COLUMN_IDS, default_visible_columns
 
@@ -1803,6 +2157,21 @@ class CosmosGuiApp(tk.Tk):
 
         save_settings(self.settings)
         self._update_transfer_symbols()
+
+    def _refresh_token_comboboxes_after_denoms(self):
+        """Apply denoms_book renames to Send/Swap lists and portfolio labels."""
+        if hasattr(self, '_refresh_symbol_combobox'):
+            self._refresh_symbol_combobox()
+        if hasattr(self, '_refresh_swap_in_combobox'):
+            self._refresh_swap_in_combobox()
+        if hasattr(self, '_refresh_swap_out_combobox'):
+            self._refresh_swap_out_combobox()
+        if hasattr(self, '_refresh_send_balances'):
+            self._refresh_send_balances()
+        if hasattr(self, '_refresh_swap_balance'):
+            self._refresh_swap_balance()
+        if self._can_fetch_balances():
+            self._refresh_wallet_balances(quiet=True)
 
     def _update_transfer_symbols(self):
         if not hasattr(self, 'cmb_symbol'):
@@ -2389,6 +2758,20 @@ class CosmosGuiApp(tk.Tk):
         ttk.Button(toolbar, text='Edit…', command=self._denoms_edit_dialog).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text='Delete', command=self._denoms_delete_selected).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text='Reload', command=self._refresh_denoms_table).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text='Copy denom', command=self._copy_denoms_denom).pack(side=tk.LEFT, padx=4)
+
+        filter_row = ttk.Frame(self.tab_denoms)
+        filter_row.pack(fill=tk.X, pady=(0, 4))
+        ttk.Label(filter_row, text='Search:').pack(side=tk.LEFT)
+        self.var_denoms_filter = tk.StringVar()
+        self.var_denoms_filter.trace_add('write', lambda *_a: self._filter_denoms_table())
+        ttk.Entry(filter_row, textvariable=self.var_denoms_filter, width=36).pack(
+            side=tk.LEFT, padx=(6, 0),
+        )
+        self._muted_label(
+            filter_row,
+            text='symbol, network, or on-chain denom · double-click row to copy denom',
+        ).pack(side=tk.LEFT, padx=(12, 0))
 
         cols = ('network', 'symbol', 'denom', 'decimal')
         self.denoms_tree = ttk.Treeview(self.tab_denoms, columns=cols, show='headings', height=20)
@@ -2408,7 +2791,19 @@ class CosmosGuiApp(tk.Tk):
         self.lbl_denoms_status = self._muted_label(self.tab_denoms, text='')
         self.lbl_denoms_status.pack(anchor=tk.W)
         self._denoms_row_by_iid: dict = {}
+        self._denoms_all_entries: list = []
+        self._denoms_tree_last_item = None
+        self.denoms_tree.bind('<<TreeviewSelect>>', lambda _e: self._remember_tree_row(
+            self.denoms_tree, '_denoms_tree_last_item',
+        ))
+        self.denoms_tree.bind(
+            '<ButtonRelease-1>',
+            lambda e: self._remember_tree_row(self.denoms_tree, '_denoms_tree_last_item', e),
+        )
+        self.denoms_tree.bind('<Double-1>', self._on_denoms_double_click)
+        self.denoms_tree.bind('<Control-c>', lambda _e: self._copy_denoms_denom())
         self._refresh_denoms_network_filter()
+        self.after(0, self._refresh_denoms_table)
 
     def _refresh_denoms_network_filter(self):
         nets = sorted({n for n in services.get_wallet_networks() if n}, key=str.lower)
@@ -2422,28 +2817,77 @@ class CosmosGuiApp(tk.Tk):
             return
         self._refresh_denoms_network_filter()
         network = self.var_denoms_network.get()
-        entries = services.list_denoms_book_entries(None if network == 'All' else network)
+        self._denoms_all_entries = services.list_denoms_book_entries(
+            None if network == 'All' else network,
+        )
+        self._filter_denoms_table()
+
+    def _filter_denoms_table(self):
+        if not hasattr(self, 'denoms_tree'):
+            return
+        needle = ''
+        if hasattr(self, 'var_denoms_filter'):
+            needle = self.var_denoms_filter.get().strip().lower()
+        rows: list = []
         self._denoms_row_by_iid.clear()
-        for item in self.denoms_tree.get_children():
-            self.denoms_tree.delete(item)
-        for entry in entries:
+        for idx, entry in enumerate(self._denoms_all_entries):
             net = entry.get('network', '')
             sym = entry.get('symbol', '')
             denom = entry.get('denom_contract', '')
-            dec = entry.get('decimal', '6')
-            iid = self.denoms_tree.insert(
-                '',
-                tk.END,
-                values=(net, sym, denom, dec),
-            )
-            self._denoms_row_by_iid[iid] = entry
-        self.lbl_denoms_status.configure(text=f'{len(entries)} mapping(s)')
+            dec = str(entry.get('decimal', '6'))
+            hay = f'{net} {sym} {denom} {dec}'.lower()
+            if needle and needle not in hay:
+                continue
+            rows.append((f'denom-{idx}', (net, sym, denom, dec), entry))
+        self._tree_bulk_update = True
+        try:
+            children = self.denoms_tree.get_children()
+            if children:
+                self.denoms_tree.delete(*children)
+            for iid, values, entry in rows:
+                self.denoms_tree.insert('', tk.END, iid=iid, values=values)
+                self._denoms_row_by_iid[iid] = entry
+        finally:
+            self._tree_bulk_update = False
+        total = len(self._denoms_all_entries)
+        shown = len(rows)
+        if needle:
+            self.lbl_denoms_status.configure(text=f'{shown} of {total} mapping(s) (filtered)')
+        else:
+            self.lbl_denoms_status.configure(text=f'{shown} mapping(s)')
 
     def _denoms_selected_entry(self):
-        sel = self.denoms_tree.selection()
-        if not sel:
+        if not hasattr(self, 'denoms_tree'):
             return None
-        return self._denoms_row_by_iid.get(sel[0])
+        item = self._treeview_focus_item(
+            self.denoms_tree, last_item_attr='_denoms_tree_last_item',
+        )
+        if not item:
+            return None
+        return self._denoms_row_by_iid.get(item)
+
+    def _on_denoms_double_click(self, event):
+        self._remember_tree_row(self.denoms_tree, '_denoms_tree_last_item', event)
+        self._copy_denoms_denom()
+
+    def _copy_denoms_denom(self):
+        if not hasattr(self, 'denoms_tree'):
+            return
+        item = self._treeview_focus_item(
+            self.denoms_tree, last_item_attr='_denoms_tree_last_item',
+        )
+        if not item:
+            messagebox.showinfo('Denoms', 'Select a row first.', parent=self)
+            return
+        denom = self._treeview_column_value(self.denoms_tree, item, 2)
+        if not denom:
+            entry = self._denoms_row_by_iid.get(item)
+            denom = (entry or {}).get('denom_contract', '').strip()
+        if not denom:
+            messagebox.showinfo('Denoms', 'No on-chain denom in this row.', parent=self)
+            return
+        self._copy_text_to_clipboard(denom)
+        self.log(f'Copied denom: {denom}')
 
     def _denoms_entry_dialog(self, title: str, entry: Optional[dict] = None):
         dialog = tk.Toplevel(self)
@@ -2486,6 +2930,7 @@ class CosmosGuiApp(tk.Tk):
                 return
             dialog.destroy()
             self._refresh_denoms_table()
+            self._refresh_token_comboboxes_after_denoms()
             self.log(f'Denoms book: {sym_var.get().strip()} on {net_var.get().strip()}')
 
         btn_row = ttk.Frame(dialog)
@@ -2518,6 +2963,7 @@ class CosmosGuiApp(tk.Tk):
             return
         if services.delete_denoms_book_entry(net, entry.get('denom_contract', '')):
             self._refresh_denoms_table()
+            self._refresh_token_comboboxes_after_denoms()
             self.log(f'Deleted denoms mapping: {sym} on {net}')
         else:
             messagebox.showerror('Denoms', 'Could not delete entry.', parent=self)
@@ -2585,12 +3031,22 @@ class CosmosGuiApp(tk.Tk):
         self.addr_tree.configure(yscrollcommand=scroll.set)
         self.addr_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, pady=8)
         scroll.pack(side=tk.RIGHT, fill=tk.Y, pady=8)
-        self.addr_tree.bind('<Double-1>', lambda _e: self._copy_address_book_address())
+        self._addr_tree_last_item = None
+        self.addr_tree.bind('<<TreeviewSelect>>', lambda _e: self._remember_tree_row(
+            self.addr_tree, '_addr_tree_last_item',
+        ))
+        self.addr_tree.bind(
+            '<ButtonRelease-1>',
+            lambda e: self._remember_tree_row(self.addr_tree, '_addr_tree_last_item', e),
+        )
+        self.addr_tree.bind('<Double-1>', self._on_address_book_double_click)
+        self.addr_tree.bind('<Control-c>', lambda _e: self._copy_address_book_address())
 
         self._address_entries = []
+        self._tree_bulk_update = False
         self.lbl_addr_scope = self._muted_label(self.tab_addresses, text='')
         self.lbl_addr_scope.pack(anchor=tk.W, pady=(0, 4))
-        self._load_addresses()
+        self.after(0, self._load_addresses)
 
     def _on_address_book_wallet_scope_changed(self):
         if hasattr(self, 'var_addr_all_wallets'):
@@ -2639,31 +3095,44 @@ class CosmosGuiApp(tk.Tk):
         self._run_async('Address book', worker, on_success=on_success)
 
     def _filter_addresses(self):
+        if not hasattr(self, 'addr_tree'):
+            return
         needle = self.var_addr_filter.get().strip().lower()
-        for item in self.addr_tree.get_children():
-            self.addr_tree.delete(item)
-        for entry in self._address_entries:
+        rows = []
+        for idx, entry in enumerate(self._address_entries):
             hay = f'{entry.get("name", "")} {entry.get("network", "")} {entry.get("address", "")}'.lower()
             if needle and needle not in hay:
                 continue
-            addr = entry.get('address', '')
-            network = entry.get('network', '')
-            self.addr_tree.insert(
-                '',
-                tk.END,
-                iid=f'{network}:{addr}' if network and addr else None,
-                values=(entry.get('name', ''), network, addr),
+            rows.append(
+                (
+                    f'addr-{idx}',
+                    (entry.get('name', ''), entry.get('network', ''), entry.get('address', '')),
+                )
             )
+        self._tree_bulk_update = True
+        try:
+            children = self.addr_tree.get_children()
+            if children:
+                self.addr_tree.delete(*children)
+            for iid, values in rows:
+                self.addr_tree.insert('', tk.END, iid=iid, values=values)
+        finally:
+            self._tree_bulk_update = False
+
+    def _on_address_book_double_click(self, event):
+        self._remember_tree_row(self.addr_tree, '_addr_tree_last_item', event)
+        self._copy_address_book_address()
 
     def _copy_address_book_address(self):
         if not hasattr(self, 'addr_tree'):
             return
-        item = self._treeview_focus_item(self.addr_tree)
+        item = self._treeview_focus_item(
+            self.addr_tree, last_item_attr='_addr_tree_last_item',
+        )
         if not item:
             messagebox.showinfo('Address book', 'Select a row first.')
             return
-        values = self.addr_tree.item(item, 'values')
-        address = values[2] if len(values) > 2 else ''
+        address = self._treeview_column_value(self.addr_tree, item, 2)
         if not address:
             messagebox.showinfo('Address book', 'No address in this row.')
             return

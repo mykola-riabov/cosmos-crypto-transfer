@@ -6,6 +6,12 @@
     "decimal": "6"
   },
   {
+    "symbol": "nhash",
+    "denom_contract": "ibc/00A6285B20010D443BA2DDF0203D29B4FC5E2582D670181BBCAC1583744BA13B",
+    "network": "agoric",
+    "decimal": "6"
+  },
+  {
     "symbol": "osmo",
     "denom_contract": "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B",
     "network": "agoric",
@@ -824,6 +830,12 @@
   {
     "symbol": "stevmos",
     "denom_contract": "ibc/C5579A9595790017C600DD726276D978B9BF314CF82406CE342720A9C7911A01",
+    "network": "osmosis",
+    "decimal": "6"
+  },
+  {
+    "symbol": "usdc.noble",
+    "denom_contract": "ibc/498A0751C798A0D9A389AA3691123DADA57DAA4FE165D5C75894505B876BA6E4",
     "network": "osmosis",
     "decimal": "6"
   },

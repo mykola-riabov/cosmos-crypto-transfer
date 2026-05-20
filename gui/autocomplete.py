@@ -1,4 +1,4 @@
-"""Search-as-you-type for ttk.Combobox (type to filter options)."""
+"""Search-as-you-type for ttk.Combobox — ticker prefix or denom substring."""
 
 from __future__ import annotations
 
@@ -15,6 +15,7 @@ _IGNORE_KEYS = frozenset(
         'Right',
         'Return',
         'Tab',
+        'Escape',
         'Shift_L',
         'Shift_R',
         'Control_L',
@@ -25,9 +26,44 @@ _IGNORE_KEYS = frozenset(
 )
 
 
+def symbol_from_display(display: str) -> str:
+    """'OSMO — uosmo' → 'OSMO'."""
+    return (display or '').split(' — ', 1)[0].strip()
+
+
+def token_matches(display: str, needle: str) -> bool:
+    """Match ticker prefix or substring of on-chain denom (e.g. ibc/498A…)."""
+    if not needle:
+        return True
+    n = needle.strip().lower()
+    if not n:
+        return True
+    sym = symbol_from_display(display).lower()
+    parts = display.split(' — ', 1)
+    denom = parts[1].lower() if len(parts) > 1 else ''
+    full = display.lower()
+    return sym.startswith(n) or (denom and n in denom) or n in full
+
+
+def filter_token_values(all_values: List[str], needle: str) -> List[str]:
+    n = (needle or '').strip()
+    if not n:
+        return list(all_values)
+    return [v for v in all_values if token_matches(v, n)]
+
+
+def prefix_matches(typed: str, candidates: List[str]) -> List[str]:
+    """Single candidate when filter already narrowed to one match."""
+    prefix = (typed or '').strip().lower()
+    if not prefix:
+        return []
+    matches = [c for c in candidates if token_matches(c, prefix)]
+    return matches if len(matches) == 1 else []
+
+
 def resolve_combobox_value(typed: str, candidates: List[str]) -> str | None:
     """Pick a single candidate from partial input, or None if ambiguous."""
-    needle = typed.strip()
+    needle = (typed or '').strip()
     if not needle or not candidates:
         return None
     if needle in candidates:
@@ -36,12 +72,21 @@ def resolve_combobox_value(typed: str, candidates: List[str]) -> str | None:
     exact = [c for c in candidates if c.lower() == lower]
     if len(exact) == 1:
         return exact[0]
-    starts = [c for c in candidates if c.lower().startswith(lower)]
+    exact_sym = [
+        c for c in candidates if symbol_from_display(c).lower() == lower
+    ]
+    if len(exact_sym) == 1:
+        return exact_sym[0]
+    by_denom = [
+        c
+        for c in candidates
+        if ' — ' in c and lower in c.split(' — ', 1)[1].lower()
+    ]
+    if len(by_denom) == 1:
+        return by_denom[0]
+    starts = prefix_matches(needle, candidates)
     if len(starts) == 1:
         return starts[0]
-    contains = [c for c in candidates if lower in c.lower()]
-    if len(contains) == 1:
-        return contains[0]
     return None
 
 
@@ -52,11 +97,10 @@ def bind_searchable_combobox(
     textvariable: tk.StringVar | None = None,
 ) -> Callable[[], None]:
     """
-    Allow typing in a Combobox to filter `values`. Returns a refresh function
-    to reload the full list from get_values().
+    Type to filter: ticker prefix or part of on-chain denom (e.g. ``ibc/498A``).
 
-    Pass `textvariable` so dropdown picks update the bound StringVar reliably
-    (required on Linux when state='normal').
+    Example: ``os`` shows OSMO variants; ``498a`` finds a USDC by IBC hash.
+    Tab / Enter picks the value when it is unambiguous.
     """
     state: dict = {'all': [], 'ignore_keys': False}
 
@@ -78,11 +122,14 @@ def bind_searchable_combobox(
             return
         if _event is not None and _event.keysym in _IGNORE_KEYS:
             return
-        needle = combobox.get().strip().lower()
+        needle = combobox.get().strip()
         if not needle:
             combobox['values'] = state['all']
             return
-        combobox['values'] = [v for v in state['all'] if needle in v.lower()]
+        filtered = filter_token_values(state['all'], needle)
+        combobox['values'] = filtered
+        if filtered:
+            combobox.after(1, lambda: combobox.event_generate('<Down>'))
 
     def on_selected(_event=None) -> None:
         state['ignore_keys'] = True
@@ -110,10 +157,25 @@ def bind_searchable_combobox(
             on_change()
         return 'break'
 
+    def on_tab(_event=None) -> None:
+        picked = resolve_combobox_value(combobox.get(), state['all'])
+        if picked is not None:
+            commit_value(picked)
+            if on_change:
+                on_change()
+        return 'break'
+
+    def on_focus_out(_event=None) -> None:
+        picked = resolve_combobox_value(combobox.get(), state['all'])
+        if picked is not None:
+            commit_value(picked)
+
     combobox.configure(state='normal')
     combobox.bind('<KeyRelease>', apply_filter)
     combobox.bind('<<ComboboxSelected>>', on_selected)
     combobox.bind('<Return>', on_return)
+    combobox.bind('<Tab>', on_tab)
+    combobox.bind('<FocusOut>', on_focus_out)
     refresh()
     return refresh
 

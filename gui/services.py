@@ -7,6 +7,13 @@ from typing import Callable, Iterable, List, Optional
 
 from action_crypto.bank.balance_query import query_all_balances, query_symbol_balance_on_network
 from action_crypto.info.tokens_info import fetch_osmosis_token_rows
+from action_crypto.tx.swap.skip_swap import (
+    DEFAULT_SWAP_GAS,
+    SWAP_NETWORK,
+    SwapPreview,
+    broadcast_skip_swap,
+    prepare_skip_swap,
+)
 from action_crypto.tx.transfer.transfer_ibc import (
     broadcast_ibc_transfer,
     prepare_ibc_transfer,
@@ -285,7 +292,7 @@ def transfer_token_choices(network: str, list_mode: Optional[str] = None) -> Lis
         if rest and denom.lower().startswith('ibc/'):
             catalog.ensure_ibc_denom_resolved(network, denom, rest)
         row = catalog.get_row(network, denom)
-        sym = (row.get('symbol') if row else symbol) or symbol
+        sym = catalog.symbol_for_denom(network, denom) if row else (symbol or denom)
         sym = str(sym).strip()
         if sym.upper().startswith('IBC'):
             return
@@ -332,8 +339,14 @@ def resolve_transfer_symbol(network: str, picked: str, list_mode: Optional[str] 
     picked = (picked or '').strip()
     if not picked:
         raise ValueError('Enter a token symbol.')
+    picked_lower = picked.lower()
     for choice in transfer_token_choices(network, list_mode):
-        if picked == choice['display'] or picked.lower() == choice['symbol'].lower():
+        if picked == choice['display'] or picked_lower == choice['symbol'].lower():
+            return choice['symbol']
+        denom = (choice.get('denom') or '').strip()
+        if denom and picked_lower in denom.lower():
+            return choice['symbol']
+        if ' — ' in picked and picked == choice['display']:
             return choice['symbol']
     network = (network or '').strip()
     catalog_symbols = get_token_catalog().symbols_for_network(network) if network else []
@@ -355,7 +368,7 @@ def _balance_token_choices(network: str, catalog, rest: Optional[str]) -> List[d
         if rest and denom.lower().startswith('ibc/'):
             catalog.ensure_ibc_denom_resolved(network, denom, rest)
         row = catalog.get_row(network, denom)
-        sym = (row.get('symbol') if row else symbol) or symbol
+        sym = catalog.symbol_for_denom(network, denom) if row else (symbol or denom)
         sym = str(sym).strip()
         if sym.upper().startswith('IBC'):
             return
@@ -800,6 +813,7 @@ def record_transfer_tx(
         timeout_mode=mode,
         timeout_value=tval,
         timeout_display=tdisplay,
+        tx_kind='ibc',
     )
 
 
@@ -824,6 +838,165 @@ def filtered_tx_history(
     except ValueError as exc:
         raise ValueError(str(exc)) from exc
     return filter_tx_history(rows, date_from=d_from, date_to=d_to, statuses=statuses)
+
+
+def swap_wallet_key() -> str:
+    from project_utils.wallet_ids import book_entry_name
+    from project_utils.wallet_profiles import get_active_wallet_id
+
+    return book_entry_name(get_active_wallet_id(), SWAP_NETWORK)
+
+
+def swap_wallet_attr() -> str:
+    from project_utils.wallet_ids import wallet_attr_name
+    from project_utils.wallet_profiles import get_active_wallet_id
+
+    return wallet_attr_name(get_active_wallet_id(), SWAP_NETWORK)
+
+
+def gui_prepare_swap(
+    symbol_in: str,
+    symbol_out: str,
+    amount: float,
+    *,
+    slippage_percent: float = 1.5,
+    gas: int = DEFAULT_SWAP_GAS,
+    split_routes: bool = False,
+) -> SwapPreview:
+    paths = get_paths()
+    return prepare_skip_swap(
+        symbol_in,
+        symbol_out,
+        amount,
+        paths.address_book,
+        paths.denoms_book_path,
+        swap_wallet_key(),
+        swap_wallet_attr(),
+        slippage_percent=slippage_percent,
+        gas=gas,
+        split_routes=split_routes,
+    )
+
+
+def record_swap_tx(
+    *,
+    status: str,
+    preview: Optional[SwapPreview] = None,
+    gas: int = 0,
+    tx_hash: str = '',
+    error: str = '',
+    symbol_in: str = '',
+    symbol_out: str = '',
+    amount: str = '',
+) -> None:
+    from project_utils.tx_history import append_tx_record
+
+    sym = ''
+    amt = ''
+    if preview is not None:
+        sym = f'{preview.symbol_in}→{preview.symbol_out}'
+        amt = str(preview.amount_in_token)
+    elif symbol_in or symbol_out:
+        sym = f'{symbol_in}→{symbol_out}'.strip('→')
+        amt = str(amount)
+    est_out = ''
+    if preview is not None:
+        est_out = f'~{preview.estimated_out_token:g} {preview.symbol_out}'
+    append_tx_record(
+        status=status,
+        source=SWAP_NETWORK,
+        destination=SWAP_NETWORK,
+        symbol=sym,
+        amount=amt,
+        gas=int(gas or (preview.gas if preview else 0)),
+        channel='skip-swap',
+        tx_hash=tx_hash,
+        error=error,
+        sender_address=getattr(preview, 'sender_address', ''),
+        receiver_address=getattr(preview, 'sender_address', ''),
+        timeout_display=(
+            f'slippage {preview.slippage_percent:g}% · est. {est_out}'
+            if preview
+            else ''
+        ),
+        tx_kind='swap',
+    )
+
+
+def gui_broadcast_swap(preview: SwapPreview, gas_limit: Optional[int] = None) -> str:
+    from project_utils.tx_query import TxQueryTimeout, rest_base_from_client_url, wait_for_tx_rest
+
+    ledger_module = load_ledger_clients_module()
+    wallets_module = load_wallets_module()
+    client = get_network_client(ledger_module, SWAP_NETWORK)
+    wallet = get_wallet(wallets_module, preview.wallet_attr)
+    limit = int(gas_limit) if gas_limit is not None else preview.gas
+    rest_url = destination_rest_url(SWAP_NETWORK) or rest_base_from_client_url(
+        getattr(getattr(client, 'network_config', None), 'url', '')
+    )
+    try:
+        tx_hash = broadcast_skip_swap(preview, client, wallet, gas_limit=limit)
+    except Exception as exc:
+        record_swap_tx(status='failed', preview=preview, gas=limit, error=str(exc))
+        msg = str(exc)
+        lower = msg.lower()
+        if 'not found' in lower and 'account' in lower:
+            raise RuntimeError(
+                f'Account not found on {SWAP_NETWORK} ({preview.sender_address}).\n\n'
+                f'Fund this Osmosis address before swapping.'
+            ) from exc
+        if 'out of gas' in lower:
+            raise RuntimeError(parse_out_of_gas_hint(msg)) from exc
+        raise
+    try:
+        if not rest_url:
+            raise RuntimeError('No REST URL for Osmosis — cannot confirm swap on chain.')
+        response = wait_for_tx_rest(rest_url, tx_hash, timeout_sec=90.0)
+        if not response.is_successful:
+            err = (response.raw_log or 'Transaction failed on chain').strip()
+            record_swap_tx(
+                status='failed',
+                preview=preview,
+                gas=limit,
+                tx_hash=tx_hash,
+                error=err[:4000],
+            )
+            if 'out of gas' in err.lower():
+                raise RuntimeError(parse_out_of_gas_hint(err, used_gas=response.gas_used))
+            raise RuntimeError(err)
+    except TxQueryTimeout as exc:
+        record_swap_tx(
+            status='failed',
+            preview=preview,
+            gas=limit,
+            tx_hash=tx_hash,
+            error=str(exc),
+        )
+        raise RuntimeError(
+            f'Transaction sent (hash {tx_hash}) but was not confirmed within 90s.\n'
+            f'Check the explorer — it may still succeed.\n\n{exc}'
+        ) from exc
+    except Exception as exc:
+        if 'out of gas' in str(exc).lower():
+            record_swap_tx(
+                status='failed',
+                preview=preview,
+                gas=limit,
+                tx_hash=tx_hash,
+                error=str(exc),
+            )
+            raise RuntimeError(parse_out_of_gas_hint(str(exc))) from exc
+        record_swap_tx(
+            status='failed',
+            preview=preview,
+            gas=limit,
+            tx_hash=tx_hash,
+            error=str(exc),
+        )
+        raise
+    record_swap_tx(status='success', preview=preview, gas=limit, tx_hash=tx_hash)
+    invalidate_balance_cache()
+    return tx_hash
 
 
 def gui_broadcast_transfer(route, preview, gas_limit: Optional[int] = None) -> str:

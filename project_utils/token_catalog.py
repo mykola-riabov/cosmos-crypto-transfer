@@ -128,19 +128,33 @@ class TokenCatalog:
         except (TypeError, ValueError):
             dec = None
         key = (network_n, denom_n)
-        row = self._by_network_denom.get(key, {})
-        row.update(
-            {
-                'network': network,
-                'denom': denom_n,
-                'symbol': (symbol or row.get('symbol') or denom_n).strip(),
-                'display': (display or row.get('display') or symbol or denom_n).strip(),
-                'decimals': dec if dec is not None else row.get('decimals'),
-                'source': source or row.get('source'),
-            }
-        )
-        if coingecko_id:
-            row['coingecko_id'] = coingecko_id
+        existing = self._by_network_denom.get(key)
+        from_denoms = existing is not None and existing.get('source') == 'denoms_book'
+
+        if from_denoms and source != 'denoms_book':
+            row = dict(existing)
+            if dec is not None and row.get('decimals') is None:
+                row['decimals'] = dec
+            if coingecko_id and not row.get('coingecko_id'):
+                row['coingecko_id'] = coingecko_id
+        else:
+            row = dict(existing or {})
+            new_sym = (symbol or row.get('symbol') or denom_n).strip()
+            new_display = (display or row.get('display') or new_sym or denom_n).strip()
+            row.update(
+                {
+                    'network': network,
+                    'denom': denom_n,
+                    'symbol': new_sym,
+                    'display': new_display,
+                    'decimals': dec if dec is not None else row.get('decimals'),
+                    'source': source or row.get('source') or '',
+                }
+            )
+            if source == 'denoms_book':
+                row['source'] = 'denoms_book'
+            if coingecko_id:
+                row['coingecko_id'] = coingecko_id
         self._by_network_denom[key] = row
         sym = (row.get('symbol') or '').lower()
         if sym:
@@ -284,15 +298,21 @@ class TokenCatalog:
         if rest_base:
             self.resolve_ibc_via_rest(network, denom, rest_base)
 
-    def label_for_denom(self, network: str, denom: str) -> str:
+    def symbol_for_denom(self, network: str, denom: str) -> str:
+        """Human label for a denom; denoms_book name wins over registry/keplr."""
         self.ensure_loaded()
         row = self.get_row(network, denom)
         if not row:
-            if denom.startswith('ibc/'):
+            if denom.lower().startswith('ibc/'):
                 return f'IBC…{denom[-8:]}'
             return denom
-        sym = row.get('symbol') or row.get('display') or denom
-        return str(sym).upper() if len(str(sym)) <= 8 else str(sym)
+        sym = (row.get('symbol') or row.get('display') or denom).strip()
+        if row.get('source') == 'denoms_book':
+            return sym
+        return sym.upper() if len(sym) <= 8 else sym
+
+    def label_for_denom(self, network: str, denom: str) -> str:
+        return self.symbol_for_denom(network, denom)
 
     def format_amount(
         self,
